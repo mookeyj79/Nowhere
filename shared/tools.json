@@ -27,5 +27,8 @@
     { "name": "tofu",      "layer": "dev", "packages": { "winget": "OpenTofu.Tofu" } },
     { "name": "gh",        "layer": "dev", "packages": { "winget": "GitHub.cli", "apt": "gh" } },
     { "name": "code",      "layer": "dev", "packages": { "winget": "Microsoft.VisualStudioCode" } }
+  ],
+  "uvTools": [
+    { "name": "server-motd", "version": "0.1.0", "roles": ["server"] }
   ]
 }

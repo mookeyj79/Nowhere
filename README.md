@@ -37,7 +37,8 @@ A modular PowerShell 7 profile under `powershell/`. A few-line stub at `$PROFILE
 | `core/conf.d/35-helpers.ps1` | Functions with logic: `gcl`, `touch`, `mkcd`, `wget`, `List-COM` (Windows only) |
 | `core/conf.d/40-profile.ps1` | `reload`, `editp`, `update`, `aliases` |
 | `core/conf.d/41-goto.ps1`, `42-venv.ps1` | `goto` bookmarks, uv virtualenv helpers |
-| `core/conf.d/50-init.ps1` | zoxide and Starship init. Must load last because Starship overwrites the prompt |
+| `core/conf.d/50-init.ps1` | zoxide and Starship init. Must load before anything that touches the prompt, because Starship overwrites it |
+| `core/conf.d/60-motd.ps1` | Server role only: runs `server-motd` at login when it is on `PATH` |
 | `dev/conf.d/01-dev-environment.ps1` | `EDITOR` = `code --wait` |
 | `dev/conf.d/31-dev-aliases.ps1` | kubectl, helm, docker, terraform/tofu wrappers (OpenTofu plan is `topl`) |
 | `dev/conf.d/43-ansible-wsl.ps1` | Runs `ansible*` commands inside WSL and translates Windows paths |
@@ -51,3 +52,14 @@ Other contents:
 - `Modules/`: vendored PowerShell modules. Git-ignored; bootstrap will install them from a pinned manifest.
 - `tests/powershell/`: Pester tests that run a real `pwsh` against a throwaway HOME. Run `Invoke-Pester tests/powershell` (Pester 5+).
 Optional tools the profile uses when they are installed: eza, zoxide, Starship, Carapace, kubectl, helm, docker, gh, terraform/tofu, uv.
+
+## Windows Server role
+
+`bootstrap/bootstrap.ps1 server` readies a Windows Server with the core layer only (no dev layer, no dev tools) plus the `server-motd` login banner.
+
+- `server-motd` is installed with `uv tool install server-motd==<version>`; the version is pinned under `uvTools` in `shared/tools.json`. Bootstrap skips the install when that version is already present.
+- `config.toml` is seeded from `shared/server-motd/config.toml.example` to `%ProgramData%\server-motd\config.toml` with owner-only permissions, and never overwritten.
+- The profile (`powershell/core/conf.d/60-motd.ps1`) runs `server-motd` only on the `server` role and only when it is on `PATH`. DevBoxes never show it.
+- `server-motd install-profile` and `uninstall-profile` are not used on Nowhere machines. The profile above is the only hook, so the stub keeps a single owner.
+- Editions without winget (Windows Server 2022 and older): bootstrap warns, skips the core tool install and carries on with uv, `server-motd`, modules, the stub and the override. Install the listed tools by hand, or use a Server 2025 image, which ships winget.
+- `update` on a server runs Windows Update and, when winget exists, winget. WSL and disk cleanup (cleanmgr is absent without Desktop Experience) are not part of the default there; pass `-WSL` or `-DiskCleanup` explicitly.

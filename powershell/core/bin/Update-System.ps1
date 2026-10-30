@@ -8,6 +8,15 @@ param(
 
 $All = -not ($Windows -or $Winget -or $WSL -or $DiskCleanup)
 
+# On a server (role set by the Nowhere profile) a bare `update` means Windows
+# Update plus winget when it exists. WSL is not a server feature and cleanmgr
+# is absent without Desktop Experience; both stay available as explicit flags.
+if ($All -and $global:NowhereRole -eq 'server') {
+    $All = $false
+    $Windows = $true
+    $Winget = [bool](Get-Command winget -ErrorAction SilentlyContinue)
+}
+
 # Self-updating apps winget should never touch. Pinned automatically if installed.
 # Override without editing: set WINGET_PIN_IDS to a comma-separated list of winget IDs.
 $PinIds = if ($env:WINGET_PIN_IDS) { $env:WINGET_PIN_IDS -split '[,;\s]+' | Where-Object { $_ } } else {
