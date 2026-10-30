@@ -7,6 +7,11 @@ here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$here/lib.sh"
 # shellcheck source=tests/zsh/scenarios.sh
 . "$here/scenarios.sh"
+for extra in "$here"/scenarios-*.sh; do
+    [ -e "$extra" ] || continue
+    # shellcheck source=/dev/null
+    . "$extra"
+done
 trap cleanup_sandboxes EXIT
 
 [ -n "$ZSH_BIN" ] || { echo "zsh not found on PATH" >&2; exit 2; }
@@ -23,7 +28,7 @@ while IFS='|' read -r id shells _; do
         echo "FAIL $id (no implementation $fn)"; failed=$((failed + 1)); continue
     fi
     if ( set -u; "$fn" ); then echo "ok   $id"; pass=$((pass + 1)); else echo "FAIL $id"; failed=$((failed + 1)); fi
-done < "$here/../scenarios.txt"
+done < <(cat "$here/../scenarios.txt" "$here"/scenarios-*.txt)
 
 echo "$pass passed, $failed failed"
 [ "$failed" -eq 0 ]
