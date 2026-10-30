@@ -20,7 +20,7 @@ csession() {
         esac
         chmod +x "$bin/$t"
     done
-    { echo "export NOWHERE_ROLE=server"; echo "source '$REPO_ROOT/zsh/profile.zsh'"; } > "$home/stub.zsh"
+    { echo "export NOWHERE_ROLE=server"; echo "$ZSH_SANDBOX_PRELUDE"; echo "source '$REPO_ROOT/zsh/profile.zsh'"; } > "$home/stub.zsh"
     CODE=0
     OUT=$(env -i HOME="$home" PATH="$bin" XDG_CACHE_HOME="$CS_SB/xdg" ORDER= \
         "$ZSH_BIN" -f -c "source '$home/stub.zsh'; $probe" 2> "$CS_SB/err") || CODE=$?

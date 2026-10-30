@@ -39,6 +39,12 @@ assert_no_file() { [ ! -e "$1" ] || fail "unexpected $1"; }
 assert_match() { grep -qE -- "$2" <<< "$1" || fail "[$1] does not match /$2/"; }
 count_matching() { printf '%s\n' "$1" | grep -c -- "$2" || true; }
 
+# Sourced first in every sandboxed zsh. compinit's compaudit security scan depends on
+# the host's fpath ownership and shells out to getent/grep (absent from the shim PATH):
+# on Ubuntu runners it flags group-writable dirs, then prompts and aborts. That is
+# host state, not anything under test, so compinit runs with -u (use all dirs).
+ZSH_SANDBOX_PRELUDE='compinit() { unfunction compinit; autoload -Uz compinit; compinit -u "$@" }'
+
 # --- zsh session sandbox --------------------------------------------------------
 # Inputs (globals, reset by reset_session): SESSION_LOCAL (override text, unset =
 # no file), SESSION_TOOLS (shim names; unset = a PATH with no tools at all),
@@ -74,10 +80,7 @@ session() {
     fi
     {
         [ -n "$role" ] && echo "export NOWHERE_ROLE='$role'"
-        # The compaudit security scan depends on the host's fpath ownership (Ubuntu
-        # runners have group-writable dirs and compinit then prompts and aborts), not on
-        # anything under test: stub it so a fresh compinit behaves the same everywhere.
-        echo 'compaudit() { return 0 }'
+        echo "$ZSH_SANDBOX_PRELUDE"
         echo "source '$REPO_ROOT/zsh/profile.zsh'"
     } > "$home/stub.zsh"
     CODE=0
