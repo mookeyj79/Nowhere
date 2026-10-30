@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: shellcheck scripts/*.sh .githooks/pre-commit
+      - run: shellcheck -x scripts/*.sh .githooks/pre-commit bootstrap/bootstrap.sh tests/zsh/*.sh
   pester:
     runs-on: windows-latest
     steps:
@@ -27,3 +27,12 @@ jobs:
           Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
           Import-Module Pester -MinimumVersion 5.5
           Invoke-Pester tests/powershell -Output Detailed -CI
+  zsh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run zsh sandbox harness (real zsh, throwaway HOME, fake apt/curl)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh jq
+          bash tests/zsh/run.sh

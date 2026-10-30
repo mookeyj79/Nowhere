@@ -1,0 +1,9 @@
+{
+  "$comment": "ZSH plugins cloned by bootstrap.sh at these exact commits into ~/.local/share/nowhere/plugins/<name>. No plugin manager: to update, change the sha here on purpose and re-run bootstrap.",
+  "plugins": [
+    { "name": "zsh-autosuggestions",                "repo": "https://github.com/zsh-users/zsh-autosuggestions.git",                "sha": "85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5" },
+    { "name": "zsh-history-substring-search",       "repo": "https://github.com/zsh-users/zsh-history-substring-search.git",       "sha": "a0bdb0d47dbaba31dba2db7af8c48a5d9c74049a" },
+    { "name": "zsh-syntax-highlighting",            "repo": "https://github.com/zsh-users/zsh-syntax-highlighting.git",            "sha": "e6683f20e5c38d3e5447f45845d04ddda75d0f23" },
+    { "name": "catppuccin-zsh-syntax-highlighting", "repo": "https://github.com/catppuccin/zsh-syntax-highlighting.git",           "sha": "7926c3d3e17d26b3779851a2255b95ee650bd928" }
+  ]
+}

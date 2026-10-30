@@ -1,0 +1,32 @@
+# Shared scenario list for the shell harnesses.
+#   id | shells (both = pwsh and zsh; zsh = zsh only) | pwsh counterpart | what it asserts
+# tests/zsh/run.sh runs every line that lists zsh and fails a line with no
+# scenario_<id> implementation. pwsh counterparts are named for cross-reading.
+role-devbox|both|Profile.Tests: role gating / devbox gets core and dev layers|devbox exposes core and dev; EDITOR is code --wait
+role-server|both|Profile.Tests: role gating / server gets core only|server exposes core only; EDITOR is nano
+role-unset|both|Profile.Tests: role gating / an unset role behaves like server|no role means server
+local-none|both|Profile.Tests: local override / starts cleanly with defaults|no override file still starts with defaults
+local-wins|both|Profile.Tests: local override / override values win|override values beat defaults
+local-nowhere-home|zsh|Bootstrap/Profile: NOWHERE_HOME default|override can set NOWHERE_HOME; default is the clone
+local-empty|both|Profile.Tests: local override / tolerates an empty override|empty override is fine
+tool-guard-git|both|Contract.Tests: tool-guarded aliases|git aliases exist only when git is on PATH
+dev-aliases-guarded|both|Contract.Tests: dev alias layer|dev aliases only on devbox and only with their tool
+missing-tools-hint|both|Contract.Tests: missing tools / starts silently apart from one hint|no tools: no errors, exactly one run-bootstrap hint
+no-hint-when-complete|both|Contract.Tests: missing tools / prints no hint when nothing is missing|all core tools present: no hint
+plugin-skip|zsh|n/a (modules are pinned PowerShell modules)|missing plugins are skipped silently with one hint
+plugin-load|zsh|n/a|plugins load from the plugin directory in conf.d order
+boot-reject-role|both|Bootstrap.Tests: role argument|invalid role changes nothing
+boot-manifest-sane|both|Bootstrap.Tests: tool manifest / pinned modules|manifest is well formed and pinned
+boot-tools-devbox|both|Bootstrap.Tests: tool install / devbox|devbox installs core and dev tools
+boot-tools-server|both|Bootstrap.Tests: tool install / server|server installs core only
+boot-uv|both|Bootstrap.Tests: uv / runs the official installer when absent|uv installer runs once when uv is absent
+boot-uv-present|both|Bootstrap.Tests: uv / does nothing when uv is on PATH|no uv install when present
+boot-stub|both|Bootstrap.Tests: stub / writes a stub|stub sets the role and sources the clone profile
+boot-stub-backup|both|Bootstrap.Tests: stub / backs up a different existing stub|existing profile is backed up, not overwritten
+boot-local-seed|both|Bootstrap.Tests: local override / seeds from the example|override seeded owner-only
+boot-local-keep|both|Bootstrap.Tests: local override / leaves an existing override untouched|existing override untouched
+boot-hooks|both|Bootstrap.Tests: git hooks|core.hooksPath set
+boot-idempotent|both|Bootstrap.Tests: idempotence|second run changes nothing
+boot-gitleaks-release|zsh|n/a (winget carries gitleaks)|pinned gitleaks release binary installed once
+boot-gitleaks-badsum|zsh|n/a|checksum mismatch aborts and installs nothing
+boot-plugins-pinned|zsh|n/a (pinned modules instead)|plugins cloned at pinned SHAs; drift corrected
