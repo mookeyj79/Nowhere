@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  update
+#
+#  Refreshes a Debian/Ubuntu Nowhere machine in one word. With bootstrap.sh it
+#  is the only thing that installs or upgrades anything.
+#
+#    1. apt packages (apt-get update + upgrade, via sudo unless root)
+#    2. zsh plugins moved to the SHAs pinned in zsh/plugins.json
+#       (cloned if missing; never floats past the pin)
+#    3. uv self update (skipped when uv is not on PATH)
+#
+#  A failing step is reported and the rest still run; exit status is non-zero
+#  if any step failed.
+# =============================================================================
+set -uo pipefail
+
+REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+PLUGIN_DIR=$HOME/.local/share/nowhere/plugins
+PINS=$REPO_ROOT/zsh/plugins.json
+FAILED=0
+
+step() { echo "==> $*"; }
+warn() { echo "update: $*" >&2; FAILED=1; }
+
+SUDO=""
+[ "$(id -u)" -eq 0 ] || SUDO=sudo
+
+# --- 1. apt -------------------------------------------------------------------
+update_apt() {
+    if ! command -v apt-get > /dev/null 2>&1; then
+        echo "apt-get not found, skipping system packages"
+        return 0
+    fi
+    step "apt packages"
+    if ! { $SUDO apt-get update && $SUDO apt-get upgrade -y; }; then
+        warn "apt step failed"
+    fi
+}
+
+# --- 2. pinned plugins ----------------------------------------------------------
+update_plugins() {
+    local name repo sha dir
+    command -v jq > /dev/null 2>&1 || { warn "jq not found, skipping plugins (run bootstrap)"; return 0; }
+    command -v git > /dev/null 2>&1 || { warn "git not found, skipping plugins"; return 0; }
+    [ -f "$PINS" ] || { warn "missing $PINS"; return 0; }
+    while IFS=$'\t' read -r name repo sha; do
+        dir=$PLUGIN_DIR/$name
+        if [ -d "$dir/.git" ] && [ "$(git -C "$dir" rev-parse HEAD 2> /dev/null)" = "$sha" ]; then
+            echo "plugin $name already at ${sha:0:12}"
+            continue
+        fi
+        step "plugin $name @ ${sha:0:12}"
+        mkdir -p "$PLUGIN_DIR"
+        if [ ! -d "$dir/.git" ]; then
+            git clone --quiet "$repo" "$dir" || { warn "clone failed: $name"; continue; }
+        fi
+        git -C "$dir" cat-file -e "$sha^{commit}" 2> /dev/null || git -C "$dir" fetch --quiet origin
+        git -C "$dir" -c advice.detachedHead=false checkout --quiet "$sha" || warn "checkout failed: $name"
+    done < <(jq -r '.plugins[] | [.name, .repo, .sha] | @tsv' "$PINS")
+}
+
+# --- 3. uv --------------------------------------------------------------------------
+update_uv() {
+    if ! command -v uv > /dev/null 2>&1; then
+        echo "uv not found, skipping (run bootstrap)"
+        return 0
+    fi
+    step "uv self update"
+    uv self update || warn "uv self update failed"
+}
+
+update_apt
+update_plugins
+update_uv
+
+if [ "$FAILED" -eq 0 ]; then step "update complete"; else echo "update: finished with errors" >&2; fi
+exit "$FAILED"
