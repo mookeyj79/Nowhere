@@ -4,7 +4,7 @@
 #   section: heading text without "## ", e.g. "Decisions so far"
 map="${3:-1}"
 section="$1"; line="$2"
-[ -n "$section" ] && [ -n "$line" ] || { echo "usage: $0 <section> <line> [map]" >&2; exit 2; }
+if [ -z "$section" ] || [ -z "$line" ]; then echo "usage: $0 <section> <line> [map]" >&2; exit 2; fi
 tmp="$(mktemp)"
 gh issue view "$map" --json body --jq .body | tr -d '\r' | LINE="$line" awk -v sec="## $section" '
   { l[NR] = $0 }
