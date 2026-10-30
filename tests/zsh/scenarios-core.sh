@@ -92,7 +92,7 @@ scenario_core_update() {
     # with the script present (ticket #19 provides it) update runs it
     reset_session; SESSION_TOOLS=""; SESSION_REAL="mkdir chmod"
     session server 'NowhereProfileDir=$HOME/fake; mkdir -p $NowhereProfileDir/core/bin; f=$NowhereProfileDir/core/bin/update
-        print "#!/bin/sh\necho updated \$*" > $f; chmod +x $f; update --now'
+        print "#!/bin/sh\necho updated \$*" > $f; command chmod +x $f; update --now'
     assert_line "$OUT" 'updated --now'
 }
 scenario_core_goto() {
