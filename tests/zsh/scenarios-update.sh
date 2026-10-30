@@ -8,8 +8,7 @@ new_update_sandbox() {
     new_bootstrap_sandbox
     mkdir -p "$BS_CLONE/zsh/core"
     cp -r "$REPO_ROOT/zsh/core/bin" "$BS_CLONE/zsh/core/bin"
-    printf '#!/bin/sh\necho "uv $*" >> "$FAKE_BIN/uv.log"\n' > "$BS_BIN/uv"
-    chmod +x "$BS_BIN/uv"
+    cp "$BS_BIN/uv.fake" "$BS_BIN/uv"
     run_bootstrap server
     [ "$BS_CODE" -eq 0 ] || fail "sandbox bootstrap failed: $BS_OUT"
     rm -f "$BS_BIN/apt.log"

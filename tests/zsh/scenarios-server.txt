@@ -1,0 +1,7 @@
+# zsh-only scenarios for the Linux Server role (same format as ../scenarios.txt).
+server-motd-install|zsh|n/a|server installs server-motd at the manifest pin via uv tool, once
+server-motd-config|zsh|n/a|config seeded from the example, owner-only, never overwritten
+server-motd-hook|zsh|n/a|update-motd.d hook calls the recorded absolute binary path, executable, stable on rerun
+server-motd-hook-devbox|zsh|n/a|devbox installs no server-motd, hook or config
+server-no-dev|zsh|n/a|dev layer tools skipped on server
+server-profile-no-motd|zsh|n/a|server zsh session never runs server-motd (no double print)
