@@ -53,3 +53,11 @@ if ($_starship) {
 }
 
 Remove-Variable _cacheDir, _zoxide, _starship -ErrorAction SilentlyContinue
+
+# --- One bootstrap hint per session if any core tool is missing -------------
+$_missing = $global:NowhereCoreTools | Where-Object { -not (Test-NowhereTool $_) }
+if ($_missing -and -not $global:NowhereHintShown) {
+    $global:NowhereHintShown = $true
+    Write-Host "Nowhere: some tools are missing ($($_missing -join ', ')); run bootstrap to install them." -ForegroundColor DarkGray
+}
+Remove-Variable _missing

@@ -42,5 +42,9 @@ function Show-Aliases {
 }
 Set-Alias -Name aliases -Value Show-Aliases
 
+# Update-System is the PowerShell function behind the shared `update` name.
+function Update-System {
+    & (Join-Path $global:NowhereProfileDir 'core/bin/Update-System.ps1') @args
+}
 Set-Alias -Name update -Value Update-System
 
