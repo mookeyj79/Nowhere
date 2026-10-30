@@ -64,10 +64,6 @@ session() {
     for t in ${SESSION_REAL:-}; do   # real binaries (mkdir, cat...) linked into the bin
         ln -s "$(command -v "$t")" "$bin/$t"
     done
-    # compinit's compaudit (fresh dump, no -C) shells out to getent to decide whether
-    # group-writable fpath dirs are safe; some distros (Ubuntu runners) have such dirs.
-    # Without getent, and a LOGNAME to look up, compaudit prompts and compinit aborts.
-    if command -v getent > /dev/null; then ln -s "$(command -v getent)" "$bin/getent"; fi
     if [ "${SESSION_PLUGINS+set}" = set ]; then
         local spec name file body
         for spec in $SESSION_PLUGINS; do   # name:relative/file:VAR (file sets VAR=1)
@@ -78,10 +74,14 @@ session() {
     fi
     {
         [ -n "$role" ] && echo "export NOWHERE_ROLE='$role'"
+        # The compaudit security scan depends on the host's fpath ownership (Ubuntu
+        # runners have group-writable dirs and compinit then prompts and aborts), not on
+        # anything under test: stub it so a fresh compinit behaves the same everywhere.
+        echo 'compaudit() { return 0 }'
         echo "source '$REPO_ROOT/zsh/profile.zsh'"
     } > "$home/stub.zsh"
     CODE=0
-    OUT=$(env -i HOME="$home" LOGNAME="$(id -un)" PATH="$bin" XDG_CACHE_HOME="$sb/xdg" ORDER= \
+    OUT=$(env -i HOME="$home" PATH="$bin" XDG_CACHE_HOME="$sb/xdg" ORDER= \
         "$ZSH_BIN" -f -c "source '$home/stub.zsh'; $probe" 2> "$sb/err") || CODE=$?
     ERR=$(cat "$sb/err")
 }
