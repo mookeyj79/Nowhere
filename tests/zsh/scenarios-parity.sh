@@ -6,7 +6,7 @@
 scenario_parity() {
     local file=$REPO_ROOT/tests/parity.txt
     local rows groups bad=0 checked=0
-    rows=$(grep -v -e '^#' -e '^$' "$file" | awk -F'|' '$2 == "both" || $2 == "zsh"')
+    rows=$(tr -d '\r' < "$file" | grep -v -e '^#' -e '^$' | awk -F'|' '$2 == "both" || $2 == "zsh"')
     [ -n "$rows" ] || fail "no parity rows for zsh"
     groups=$(printf '%s\n' "$rows" | awk -F'|' '{print $3 "|" $4}' | sort -u)
     local role tools probe id r t check arg expect got

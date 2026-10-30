@@ -35,3 +35,21 @@ _Avoid_: local config, env file
 **Stub**:
 The few-line file at a shell's own startup path (`$PROFILE`, `~/.zshrc`) that sources the profile from the repo clone.
 _Avoid_: shim, wrapper
+
+**conf.d**:
+The numbered directory of small profile files (`core/conf.d`, `dev/conf.d`) that a shell's profile sources in one merged filename order. The same numbering on PowerShell and ZSH.
+_Avoid_: profile.d, includes
+
+**Parity list**:
+`tests/parity.txt`, the single list of core command names and key behaviours (role gating, `EDITOR` defaults, missing-tool silence) that both the Pester and zsh suites read, so the four roles are checked against one definition of "feels the same".
+_Avoid_: scenario copy, mirror tests
+
+**Server MOTD**:
+The `server-motd` login banner, installed by bootstrap and shown on Servers only. Nowhere's profile or the Linux `update-motd.d` hook is its single owner; its own `install-profile` and `uninstall-profile` are not used.
+_Avoid_: banner script, motd profile
+
+## Relationships
+
+- A **role** is one of four; it decides which layers load (**core** always, **dev layer** on a DevBox only) and whether the **Server MOTD** shows.
+- **Bootstrap** installs from a **manifest**, writes the **stub** and seeds the **local override**; the stub sets the role.
+- The **parity list** is how the shells are proven to agree on **core**.
