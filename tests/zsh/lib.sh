@@ -41,7 +41,7 @@ count_matching() { printf '%s\n' "$1" | grep -c -- "$2" || true; }
 # no file), SESSION_TOOLS (shim names; unset = a PATH with no tools at all),
 # SESSION_PLUGINS (stub plugins), SESSION_FZF_ZSH (what the fzf shim prints for --zsh).
 # Outputs: OUT (stdout), ERR (stderr), CODE.
-reset_session() { unset SESSION_LOCAL SESSION_TOOLS SESSION_PLUGINS SESSION_FZF_ZSH; }
+reset_session() { unset SESSION_LOCAL SESSION_TOOLS SESSION_PLUGINS SESSION_FZF_ZSH SESSION_REAL; }
 
 session() {
     local role=$1 probe=${2:-:}
@@ -58,6 +58,9 @@ session() {
         printf '#!/bin/sh\n[ "$1" = --zsh ] && while IFS= read -r l; do printf "%%s\\n" "$l"; done < "%s/fzf-zsh.txt"\n' "$sb" > "$bin/fzf"
         printf '%s\n' "$SESSION_FZF_ZSH" > "$sb/fzf-zsh.txt"
     fi
+    for t in ${SESSION_REAL:-}; do   # real binaries (mkdir, cat...) linked into the bin
+        ln -s "$(command -v "$t")" "$bin/$t"
+    done
     if [ "${SESSION_PLUGINS+set}" = set ]; then
         local spec name file body
         for spec in $SESSION_PLUGINS; do   # name:relative/file:VAR (file sets VAR=1)

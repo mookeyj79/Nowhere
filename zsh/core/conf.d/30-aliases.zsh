@@ -39,3 +39,17 @@ alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
 alias .....='cd ../../../..'
+
+# --- eza (replaces ls; icons and git status built in) ---------------------------
+if nowhere_tool eza; then
+    alias ls='eza --icons --group-directories-first'
+    alias ll='eza -l --icons --group-directories-first --git'
+    alias la='eza -la --icons --group-directories-first --git'
+    alias lt='eza --tree --icons --level=2'
+    alias llt='eza -l --tree --icons --level=2 --git'
+fi
+
+# --- Debian names -----------------------------------------------------------------
+#  apt installs bat as batcat and fd as fdfind; keep the upstream names working.
+nowhere_tool bat || { nowhere_tool batcat && alias bat='batcat'; }
+nowhere_tool fd || { nowhere_tool fdfind && alias fd='fdfind'; }

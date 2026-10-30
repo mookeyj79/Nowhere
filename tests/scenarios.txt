@@ -30,3 +30,19 @@ boot-idempotent|both|Bootstrap.Tests: idempotence|second run changes nothing
 boot-gitleaks-release|zsh|n/a (winget carries gitleaks)|pinned gitleaks release binary installed once
 boot-gitleaks-badsum|zsh|n/a|checksum mismatch aborts and installs nothing
 boot-plugins-pinned|zsh|n/a (pinned modules instead)|plugins cloned at pinned SHAs; drift corrected
+core-eza-aliases|zsh|Profile.Tests: core aliases / eza|ls ll la lt llt exist only with eza
+core-git-aliases|zsh|Profile.Tests: core aliases / git|every g* alias present with the PowerShell flags
+core-dot-up|zsh|Profile.Tests: core aliases / navigation|.. through ..... go up
+core-bat-fd-debian|zsh|n/a (Debian packaging)|batcat and fdfind get bat and fd aliases only when the plain names are absent
+core-helpers|zsh|Profile.Tests: core helpers|gcl mkcd touch wget which resolve; mkcd and gcl change directory
+core-wget-fallback|zsh|Profile.Tests: wget helper|without wget, a curl fallback honours -O and -P
+core-profile-cmds|zsh|Profile.Tests: profile commands|reload editp aliases update exist; editp opens the clone; aliases filters
+core-reload|zsh|Profile.Tests: reload|reload re-sources the profile
+core-update|zsh|Profile.Tests: update|update runs core/bin/update, or fails with a message when absent
+core-goto|zsh|Profile.Tests: goto|goto lists, jumps, honours local bookmarks, warns on unknown
+core-venv|zsh|Profile.Tests: venv helpers|uv-backed helpers exist and call uv with the right arguments
+core-venv-activate|zsh|Profile.Tests: venv helpers|workon, lsvirtualenv, cdvirtualenv, rmvirtualenv against WORKON_HOME
+core-env|zsh|Profile.Tests: environment|PAGER LESS EDITOR defaults and local override
+core-init-cache|zsh|Profile.Tests: init|zoxide and starship init cached under the XDG cache, shared starship.toml used
+core-init-regen|zsh|Profile.Tests: init cache|cache reused until the binary is newer
+core-init-absent|zsh|Profile.Tests: init|no zoxide or starship: no init, no errors
