@@ -8,6 +8,10 @@ scenario_server_motd_install() {
     new_bootstrap_sandbox
     run_bootstrap server; assert_eq "$BS_CODE" 0 "bootstrap failed: $BS_OUT"
     assert_line "$(bs_log uv.log)" "uv tool install server-motd==$(motd_pin)"
+    # system-wide, not under the installing user's home (the hook runs as root)
+    assert_match "$(bs_log uv.env.log)" "tool install server-motd==.* \\[dir=$BS_UVTOOL_DIR bin=$BS_UVTOOL_BIN\\]"
+    assert_file "$BS_UVTOOL_BIN/server-motd"
+    assert_no_file "$BS_HOME/.local/bin/server-motd"
     run_bootstrap server; assert_eq "$BS_CODE" 0 "second run failed: $BS_OUT"
     assert_eq "$(bs_log uv.log | grep -c 'tool install')" 1 'reinstalled on second run'
 }
@@ -29,12 +33,17 @@ scenario_server_motd_hook() {
     assert_file "$hook"
     [ -x "$hook" ] || fail 'hook not executable'
     assert_match "$(head -1 "$hook")" '^#!/bin/sh'
-    assert_line "$(cat "$hook")" "exec '$BS_BIN/uvbin/server-motd'"
+    assert_line "$(cat "$hook")" "exec '$BS_UVTOOL_BIN/server-motd'"
+    assert_line "$(cat "$hook")" "[ -x '$BS_UVTOOL_BIN/server-motd' ] || exit 0"
     assert_match "$(cat "$hook")" '^PATH='   # update-motd.d runs with a bare environment
     assert_eq "$("$hook")" 'server-motd motd' 'hook output'
     local before; before=$(cat "$hook")
     run_bootstrap server; assert_eq "$BS_CODE" 0 "second run failed: $BS_OUT"
     assert_eq "$(cat "$hook")" "$before" 'hook changed on rerun'
+    # a missing binary makes the hook a silent no-op, never a login error
+    rm -f "$BS_UVTOOL_BIN/server-motd"
+    assert_empty "$("$hook" 2>&1)" 'hook output without binary'
+    "$hook" > /dev/null 2>&1 || fail 'hook exits non-zero without the binary'
 }
 scenario_server_motd_hook_devbox() {
     new_bootstrap_sandbox

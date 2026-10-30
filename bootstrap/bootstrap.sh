@@ -5,12 +5,15 @@
 #  Readies a Debian/Ubuntu machine for Nowhere. Safe to re-run: every step
 #  checks state first and does nothing when already done.
 #
-#    0. prerequisites (jq, curl, ca-certificates) via apt
+#    0. prerequisites (jq, curl, ca-certificates, unzip) via apt
 #    1. tools from shared/tools.json via apt (core always, dev on devbox)
-#    2. pinned release binaries (gitleaks) into ~/.local/bin, sha256-checked
+#    2. pinned release binaries (manifest 'release' blocks: starship, carapace,
+#       gitleaks, and on a devbox helm, terraform, tofu) into ~/.local/bin,
+#       sha256-checked
 #    3. uv via Astral's official installer, only when not on PATH
-#    3b. server only: server-motd via `uv tool install` at the manifest pin,
-#       config seeded (no overwrite, 600), root-owned update-motd.d hook
+#    3b. server only: server-motd via a system-wide `uv tool install` (root-owned
+#       /opt + /usr/local/bin) at the manifest pin, config seeded (no overwrite,
+#       600), root-owned update-motd.d hook
 #    4. zsh plugins cloned at pinned SHAs into ~/.local/share/nowhere/plugins
 #    5. ~/.zshrc stub (a different existing stub is backed up)
 #    6. local override seeded from local.zsh.example if missing, mode 600
@@ -60,7 +63,7 @@ apt_ensure() {
 }
 
 # --- 0. Prerequisites --------------------------------------------------------
-apt_ensure jq curl ca-certificates
+apt_ensure jq curl ca-certificates unzip
 
 # --- 1. Tools ----------------------------------------------------------------
 DEV=false
@@ -77,25 +80,41 @@ case "$(uname -m)" in
     *) ARCH="" ;;
 esac
 
+# One installer for every manifest 'release' block (see the $comment in
+# shared/tools.json). Download, verify against the pinned sha256, extract the
+# one binary, install it. Skipped when the installed binary already reports
+# the pinned version.
 install_release() {
-    local name=$1 version url want have got
-    version=$(jq -r --arg n "$name" '.tools[] | select(.name == $n) | .release.version' "$MANIFEST")
-    have=$("$BIN_DIR/$name" version 2> /dev/null || true)
-    [ "${have#v}" = "$version" ] && return 0
+    local name=$1 rel version url want have got archive member vargs aname
+    rel=$(jq -c --arg n "$name" '.tools[] | select(.name == $n) | .release' "$MANIFEST")
+    version=$(jq -r '.version' <<< "$rel")
+    vargs=$(jq -r '.versionArgs // "version"' <<< "$rel")
+    # shellcheck disable=SC2086  # versionArgs is a space-separated argument list
+    have=$("$BIN_DIR/$name" $vargs 2>&1 || true)
+    if printf '%s\n' "$have" | grep -qE "(^|[^0-9.])${version//./\.}([^0-9.]|\$)"; then return 0; fi
     [ -n "$ARCH" ] || die "no $name release binary for $(uname -m)"
-    url=$(jq -r --arg n "$name" '.tools[] | select(.name == $n) | .release.url' "$MANIFEST")
+    aname=$(jq -r --arg a "$ARCH" '.arch[$a] // $a' <<< "$rel")
+    url=$(jq -r '.url' <<< "$rel")
     url=${url//\{version\}/$version}
-    url=${url//\{arch\}/$ARCH}
-    want=$(jq -r --arg n "$name" --arg a "$ARCH" '.tools[] | select(.name == $n) | .release.sha256[$a] // empty' "$MANIFEST")
+    url=${url//\{arch\}/$aname}
+    want=$(jq -r --arg a "$ARCH" '.sha256[$a] // empty' <<< "$rel")
     [ -n "$want" ] || die "no pinned checksum for $name $ARCH"
+    archive=$(jq -r '.archive // "tar.gz"' <<< "$rel")
+    member=$(jq -r --arg n "$name" '.member // $n' <<< "$rel")
+    member=${member//\{version\}/$version}
+    member=${member//\{arch\}/$aname}
     step "installing $name $version (release binary)"
     mkdir -p "$TMP/$name"
-    curl -fsSL -o "$TMP/$name.tar.gz" "$url" || die "download failed: $url"
-    got=$(sha256sum "$TMP/$name.tar.gz" | cut -d' ' -f1)
+    curl -fsSL -o "$TMP/$name.$archive" "$url" || die "download failed: $url"
+    got=$(sha256sum "$TMP/$name.$archive" | cut -d' ' -f1)
     [ "$got" = "$want" ] || die "checksum mismatch for $name (expected $want, got $got)"
-    tar -xzf "$TMP/$name.tar.gz" -C "$TMP/$name" "$name"
+    case "$archive" in
+        tar.gz) tar -xzf "$TMP/$name.$archive" -C "$TMP/$name" "$member" || die "cannot extract $member from $name archive" ;;
+        zip) unzip -oq "$TMP/$name.$archive" "$member" -d "$TMP/$name" || die "cannot extract $member from $name archive" ;;
+        *) die "unknown archive type $archive for $name" ;;
+    esac
     mkdir -p "$BIN_DIR"
-    install -m 755 "$TMP/$name/$name" "$BIN_DIR/$name"
+    install -m 755 "$TMP/$name/$member" "$BIN_DIR/$name"
 }
 mapfile -t RELEASE_TOOLS < <(jq -r --argjson dev "$DEV" ".tools[] | $LAYER_FILTER | select(.release) | .name" "$MANIFEST")
 for tool in "${RELEASE_TOOLS[@]}"; do install_release "$tool"; done
@@ -110,25 +129,35 @@ fi
 
 # --- 3b. uv tools (server-motd on servers) -------------------------------------
 # The MOTD banner is printed by a root-owned /etc/update-motd.d hook at login,
-# never by the zsh profile (that would print it twice).
+# never by the zsh profile (that would print it twice). The hook runs as root,
+# so the tool is installed machine-wide (UV_TOOL_DIR under /opt, binary in
+# /usr/local/bin, both root-owned via sudo) rather than under the installing
+# user's home, where root would be executing a user-writable file.
 MOTD_DIR=${NOWHERE_MOTD_DIR:-/etc/update-motd.d}
 MOTD_CONFIG_DIR=${NOWHERE_MOTD_CONFIG_DIR:-/etc/server-motd}
+UVTOOL_DIR=${NOWHERE_UVTOOL_DIR:-/opt/nowhere/uv-tools}
+UVTOOL_BIN_DIR=${NOWHERE_UVTOOL_BIN_DIR:-/usr/local/bin}
+uv_system_tool() {
+    # sudo's secure_path hides ~/.local/bin, so hand it uv by absolute path.
+    $SUDO env "UV_TOOL_DIR=$UVTOOL_DIR" "UV_TOOL_BIN_DIR=$UVTOOL_BIN_DIR" "$(command -v uv)" tool "$@"
+}
 while IFS=$'\t' read -r name version; do
     command -v uv > /dev/null 2>&1 || die "uv not found; cannot install $name"
-    if ! uv tool list 2> /dev/null | grep -qE "^$name v${version//./\\.}( |\$)"; then
-        step "installing $name $version (uv tool)"
-        uv tool install "$name==$version" || die "uv tool install $name failed"
+    if ! uv_system_tool list 2> /dev/null | grep -qE "^$name v${version//./\\.}( |\$)"; then
+        step "installing $name $version (uv tool, system-wide)"
+        uv_system_tool install "$name==$version" || die "uv tool install $name failed"
     fi
     if [ "$name" = server-motd ]; then
-        MOTD_BIN=$(uv tool dir --bin)/$name
-        [ -x "$MOTD_BIN" ] || die "$name not found at $MOTD_BIN after install"
+        MOTD_BIN=$UVTOOL_BIN_DIR/$name
+        $SUDO test -x "$MOTD_BIN" || die "$name not found at $MOTD_BIN after install"
         if ! $SUDO test -e "$MOTD_CONFIG_DIR/config.toml"; then
             $SUDO install -D -m 600 "$REPO_ROOT/shared/server-motd/config.toml.example" "$MOTD_CONFIG_DIR/config.toml"
             step "seeded $MOTD_CONFIG_DIR/config.toml (owner-only)"
         fi
         # update-motd.d runs with a bare environment (no ~/.local/bin on PATH, no
-        # HOME), so the hook calls the binary by the absolute path found above.
-        printf '#!/bin/sh\nPATH=/usr/local/bin:/usr/bin:/bin\nexec '"'%s'"'\n' "$MOTD_BIN" > "$TMP/50-server-motd"
+        # HOME), so the hook calls the binary by absolute path. It exits quietly if
+        # the binary is gone, so a broken install can never break a login.
+        printf '#!/bin/sh\nPATH=/usr/local/bin:/usr/bin:/bin\n[ -x '"'%s'"' ] || exit 0\nexec '"'%s'"'\n' "$MOTD_BIN" "$MOTD_BIN" > "$TMP/50-server-motd"
         if ! $SUDO cmp -s "$TMP/50-server-motd" "$MOTD_DIR/50-server-motd"; then
             $SUDO install -D -m 755 "$TMP/50-server-motd" "$MOTD_DIR/50-server-motd"
             step "wrote $MOTD_DIR/50-server-motd"
