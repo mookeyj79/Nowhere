@@ -1,2 +1,12 @@
 .githooks/* text eol=lf
 *.sh text eol=lf
+*.zsh text eol=lf
+*.zsh.example text eol=lf
+zsh/local.zsh.example text eol=lf
+tests/scenarios.txt text eol=lf
+zsh/core/bin/* text eol=lf
+zsh/**/bin/* text eol=lf
+bootstrap/*.sh text eol=lf
+tests/zsh/*.sh text eol=lf
+scripts/*.sh text eol=lf
+tests/parity.txt text eol=lf

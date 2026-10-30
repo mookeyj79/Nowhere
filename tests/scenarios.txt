@@ -1,0 +1,52 @@
+# Shared scenario list for the shell harnesses.
+#   id | shells (both = pwsh and zsh; zsh = zsh only) | pwsh counterpart | what it asserts
+# tests/zsh/run.sh runs every line that lists zsh and fails a line with no
+# scenario_<id> implementation. pwsh counterparts are named for cross-reading.
+role-devbox|both|Profile.Tests: role gating / devbox gets core and dev layers|devbox exposes core and dev; EDITOR is code --wait
+role-server|both|Profile.Tests: role gating / server gets core only|server exposes core only; EDITOR is nano
+role-unset|both|Profile.Tests: role gating / an unset role behaves like server|no role means server
+local-none|both|Profile.Tests: local override / starts cleanly with defaults|no override file still starts with defaults
+local-wins|both|Profile.Tests: local override / override values win|override values beat defaults
+local-nowhere-home|zsh|Bootstrap/Profile: NOWHERE_HOME default|override can set NOWHERE_HOME; default is the clone
+local-empty|both|Profile.Tests: local override / tolerates an empty override|empty override is fine
+tool-guard-git|both|Contract.Tests: tool-guarded aliases|git aliases exist only when git is on PATH
+dev-aliases-guarded|both|Contract.Tests: dev alias layer|dev aliases only on devbox and only with their tool
+missing-tools-hint|both|Contract.Tests: missing tools / starts silently apart from one hint|no tools: no errors, exactly one run-bootstrap hint
+no-hint-when-complete|both|Contract.Tests: missing tools / prints no hint when nothing is missing|all core tools present: no hint
+plugin-skip|zsh|n/a (modules are pinned PowerShell modules)|missing plugins are skipped silently with one hint
+plugin-load|zsh|n/a|plugins load from the plugin directory in conf.d order
+boot-reject-role|both|Bootstrap.Tests: role argument|invalid role changes nothing
+boot-manifest-sane|both|Bootstrap.Tests: tool manifest / pinned modules|manifest is well formed and pinned
+boot-tools-devbox|both|Bootstrap.Tests: tool install / devbox|devbox installs core and dev tools
+boot-tools-server|both|Bootstrap.Tests: tool install / server|server installs core only
+boot-uv|both|Bootstrap.Tests: uv / runs the official installer when absent|uv installer runs once when uv is absent
+boot-uv-present|both|Bootstrap.Tests: uv / does nothing when uv is on PATH|no uv install when present
+boot-stub|both|Bootstrap.Tests: stub / writes a stub|stub sets the role and sources the clone profile
+boot-stub-backup|both|Bootstrap.Tests: stub / backs up a different existing stub|existing profile is backed up, not overwritten
+boot-local-seed|both|Bootstrap.Tests: local override / seeds from the example|override seeded owner-only
+boot-local-keep|both|Bootstrap.Tests: local override / leaves an existing override untouched|existing override untouched
+boot-hooks|both|Bootstrap.Tests: git hooks|core.hooksPath set
+boot-idempotent|both|Bootstrap.Tests: idempotence|second run changes nothing
+boot-gitleaks-release|zsh|n/a (winget carries gitleaks)|pinned gitleaks release binary installed once
+boot-gitleaks-badsum|zsh|n/a|checksum mismatch aborts and installs nothing
+boot-release-core|zsh|n/a (winget carries them)|starship, carapace and gitleaks come from pinned releases, each downloaded once
+boot-release-dev|zsh|n/a (winget carries them)|devbox adds helm, terraform (zip) and tofu from pinned releases; server does not
+boot-linux-routes|zsh|n/a|every core tool has an apt, release or installer route on Linux; code is documented devbox-manual
+boot-plugins-pinned|zsh|n/a (pinned modules instead)|plugins cloned at pinned SHAs; drift corrected
+core-eza-aliases|zsh|Profile.Tests: core aliases / eza|ls ll la lt llt exist only with eza
+core-git-aliases|zsh|Profile.Tests: core aliases / git|every g* alias present with the PowerShell flags
+core-dot-up|zsh|Profile.Tests: core aliases / navigation|.. through ..... go up
+core-bat-fd-debian|zsh|n/a (Debian packaging)|batcat and fdfind get bat and fd aliases only when the plain names are absent
+core-helpers|zsh|Profile.Tests: core helpers|gcl mkcd touch wget which resolve; mkcd and gcl change directory
+core-wget-fallback|zsh|Profile.Tests: wget helper|without wget, a curl fallback honours -O and -P
+core-profile-cmds|zsh|Profile.Tests: profile commands|reload editp aliases update exist; editp opens the clone; aliases filters
+core-reload|zsh|Profile.Tests: reload|reload re-sources the profile
+core-update|zsh|Profile.Tests: update|update runs core/bin/update, or fails with a message when absent
+core-goto|zsh|Profile.Tests: goto|goto lists, jumps, honours local bookmarks, warns on unknown
+core-venv|zsh|Profile.Tests: venv helpers|uv-backed helpers exist and call uv with the right arguments
+core-venv-activate|zsh|Profile.Tests: venv helpers|workon, lsvirtualenv, cdvirtualenv, rmvirtualenv against WORKON_HOME
+core-env|zsh|Profile.Tests: environment|PAGER LESS EDITOR defaults and local override
+core-init-cache|zsh|Profile.Tests: init|zoxide and starship init cached under the XDG cache, shared starship.toml used
+core-init-regen|zsh|Profile.Tests: init cache|cache reused until the binary is newer
+core-init-absent|zsh|Profile.Tests: init|no zoxide or starship: no init, no errors
+parity|both|Parity.Tests: parity list|tests/parity.txt read by both suites: identical core command names, role gating, EDITOR defaults, missing-tool silence

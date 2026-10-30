@@ -3,3 +3,7 @@
 
 # Vendored PowerShell modules: installed by bootstrap from a pinned manifest
 **/Modules/
+
+# Pester output (written by Invoke-Pester -CI)
+testResults.xml
+coverage.xml

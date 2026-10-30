@@ -1,51 +1,84 @@
 # Nowhere
 
-My personal environment for all my machines: shell profiles, scripts, and tooling config, organized by machine role.
+My personal shell environment: one setup that feels the same on every machine I log into. PowerShell on Windows, ZSH on Linux. Terms are defined in [`GLOSSARY.md`](GLOSSARY.md); the design history and decisions live in the wayfinder map, [issue #1](https://github.com/mookeyj79/Nowhere/issues/1).
 
-## Status
+## Roles
 
-Nowhere is being designed before it is built. The direction and every open decision live in the wayfinder map, [issue #1](https://github.com/mookeyj79/Nowhere/issues/1). Only the Windows DevBox profile exists so far; the other three roles are not started.
+Four roles: Windows DevBox, Windows Server, Linux DevBox, Linux Server. A **core** layer is shared by all four; the **dev layer** is added only on a DevBox. Servers also get the `server-motd` login banner.
 
-The four roles are Windows DevBox, Windows Server, Linux DevBox and Linux Server. A **core** layer is shared by all four, and a **dev layer** is added only on DevBoxes. Terms are defined in [`GLOSSARY.md`](GLOSSARY.md).
+| Role | Shell | Layers | Bootstrap | `EDITOR` | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Windows DevBox | PowerShell 7 | core + dev | `bootstrap/bootstrap.ps1 devbox` | `code --wait` | kubectl/helm/docker/terraform/tofu aliases, Ansible via WSL |
+| Windows Server | PowerShell 7 | core | `bootstrap/bootstrap.ps1 server` | `nano` | `server-motd` at login, `update` = Windows Update + winget |
+| Linux DevBox | ZSH | core + dev | `bootstrap/bootstrap.sh devbox` | `code --wait` | dev aliases, tools guarded by presence |
+| Linux Server | ZSH | core | `bootstrap/bootstrap.sh server` | `nano` | `server-motd` via the root `update-motd.d` hook |
+
+The role is set by the stub (below). A missing or unknown role behaves as `server`. Linux support: Debian 13+ and Ubuntu 24.04+.
+
+## Setup
+
+Clone the repo anywhere, then run the bootstrap for the machine's role. It is idempotent: re-running changes nothing that is already done.
+
+```powershell
+# Windows (PowerShell 7, from the clone)
+pwsh -File bootstrap/bootstrap.ps1 devbox     # or: server
+```
+
+```sh
+# Linux (Debian/Ubuntu, from the clone)
+bash bootstrap/bootstrap.sh devbox            # or: server
+```
+
+Bootstrap, in order: installs tools from `shared/tools.json` (winget on Windows, apt plus checksum-pinned release binaries on Linux: starship, carapace and gitleaks, and on a devbox helm, terraform and tofu; core always, dev tools on a devbox), installs `uv` with Astral's official installer if absent, installs pinned PowerShell modules or ZSH plugins, writes the **stub**, seeds the **local override**, points `core.hooksPath` at `.githooks` (the gitleaks pre-commit hook), and on a server installs `server-motd`. Open a new shell afterwards.
+
+If a tool, module or plugin is missing, the profile starts silently and prints one hint to run bootstrap.
+
+`code` (VS Code) has no headless Linux install route, so on a Linux DevBox it is **devbox-manual**: install it by hand. The dev layer skips it when absent, and the `EDITOR` default of `code --wait` only makes sense once it is there. Every core tool has a route, so the "run bootstrap" hint clears after bootstrap.
+
+Windows Server 2022 and older have no winget: bootstrap warns, skips only the core tool install, and carries on; install the listed tools by hand or use a Server 2025 image.
 
 ## Layout
 
 | Path | Contents |
 | --- | --- |
-| `Windows DevBox/` | The existing PowerShell profile. It moves under `powershell/` once the planned layout is built |
-| `docs/` | Agent and workflow docs (issue tracker, triage labels, domain) |
+| `shared/` | Shell-neutral files: `starship.toml` (the one Catppuccin Macchiato prompt), `tools.json` (tool manifest, `uvTools` pins), `server-motd/config.toml.example` |
+| `powershell/` | `profile.ps1` entry point, `core/` and `dev/` each with `conf.d/` (numbered files, merged in one filename order) and `bin/`, `modules.json` (pinned modules), `local.ps1.example` |
+| `zsh/` | The same shape: `profile.zsh`, `core/` and `dev/` with `conf.d/` and `bin/` (`update`), `plugins.json` (plugins pinned by SHA, no plugin manager), `local.zsh.example` |
+| `bootstrap/` | `bootstrap.ps1` (Windows) and `bootstrap.sh` (Linux) |
+| `tests/` | Sandboxed suites for both shells and the shared parity list (see Tests) |
+| `docs/` | Agent docs and the [real-machine checklist](docs/real-machine-checklist.md) |
 | `scripts/` | Wayfinder helpers: `frontier.sh`, `map-append.sh`, `resolve.sh` |
-| `.githooks/`, `.github/` | gitleaks pre-commit hook and CI (gitleaks, shellcheck) |
+| `.githooks/`, `.github/` | gitleaks pre-commit hook; CI (gitleaks, shellcheck, Pester, zsh harness) |
 
-Decided but not built yet: files organised by shell (`shared/`, `powershell/`, `zsh/`, each split into core and dev), a per-OS bootstrap script with a pinned tool manifest, and an untracked per-machine local override in `~/.config/nowhere/` for paths, tokens and similar values.
+conf.d numbering (same on both shells): `00` environment, `10` line editor, `20` completions, `30` aliases (one-liners only), `35` helpers (logic), `40` profile commands (`reload`, `editp`, `update`, `aliases`), `41` goto, `42` venv helpers, `50` init (zoxide, Starship), `60` MOTD (PowerShell server only), `90` syntax highlighting (ZSH). Dev layer files use the `01`, `31`, `36`, `43` slots.
+
+## Stub and local override
+
+- **Stub**: a few lines at `$PROFILE` (PowerShell) or `~/.zshrc` (ZSH) that set `NOWHERE_ROLE` (`devbox` or `server`) and source the profile from the clone. Bootstrap writes it and backs up a different existing one.
+- **Local override**: `~/.config/nowhere/local.ps1` or `local.zsh`, outside the repo and never committed, sourced before any conf.d file. It holds machine-specific values: `NOWHERE_HOME`, `CONFCRYPT_HOME`, the editor, `goto` bookmarks, the WSL distro, tokens. Every key is optional and read with a default. Bootstrap seeds it from `local.ps1.example` / `local.zsh.example` with owner-only permissions and never overwrites it.
+
+## Servers and the MOTD
+
+Servers show `server-motd`, installed with `uv tool install server-motd==<pin>` (pin in `shared/tools.json` under `uvTools`). `server-motd install-profile` and `uninstall-profile` are not used on Nowhere machines, so the hook has a single owner:
+
+- Windows Server: the PowerShell profile (`60-motd.ps1`) runs it on the `server` role. Config at `%ProgramData%\server-motd\config.toml`.
+- Linux Server: bootstrap writes `/etc/update-motd.d/50-server-motd`, which runs the binary by absolute path. Config at `/etc/server-motd/config.toml`. The ZSH profile never calls it. The hook runs as root, so on Linux `server-motd` is installed system-wide with sudo (`UV_TOOL_DIR=/opt/nowhere/uv-tools`, binary in `/usr/local/bin`, both root-owned) instead of under the installing user's home, where root would be running a user-writable file. The hook also exits quietly if the binary is missing, so a broken install cannot break a login.
+
+Both configs are seeded from `shared/server-motd/config.toml.example`, mode owner-only, never overwritten. DevBoxes never show the MOTD.
+
+## `update`
+
+The one maintenance name on every role. On Windows it runs `Update-System` (Windows Update, winget, `uv self update` and the PowerShell modules at their pinned versions, WSL, disk cleanup; a server runs Windows Update and winget by default, `-WSL` and `-DiskCleanup` are explicit). On Linux it runs `zsh/core/bin/update` (apt, ZSH plugins at their pinned SHAs, `uv self update`). It is the only thing besides bootstrap that installs or upgrades.
+
+## Tests
+
+- `tests/zsh/run.sh`: real `zsh` against a throwaway HOME with a fake apt/curl. Needs `zsh` and `jq`. Run `bash tests/zsh/run.sh [scenario-id ...]`.
+- `tests/powershell/`: Pester 5.5+ against a real `pwsh` in a throwaway HOME. Run `Invoke-Pester tests/powershell` (slow, several minutes). Pester result files (`testResults.xml`) are git-ignored; CI writes its own to the runner's temp directory.
+- `tests/scenarios.txt` lists the shared scenario ids and their pwsh counterparts. `tests/parity.txt` is the one list **both** suites read (`Parity.Tests.ps1` and `scenarios-parity.sh`): core command names, role gating, `EDITOR` defaults, and missing-tool silence must be identical in pwsh and zsh. Add a line there to extend the parity contract.
+- CI (`.github/workflows/gitleaks.yml`) runs gitleaks, shellcheck, Pester on Windows and the zsh harness on Ubuntu.
+
+The sandboxes cannot show that a real machine feels right; use [`docs/real-machine-checklist.md`](docs/real-machine-checklist.md) after bootstrapping each role.
 
 ## Contributing
 
-Enable the secrets hook once per clone: `git config core.hooksPath .githooks`. It needs [gitleaks](https://github.com/gitleaks/gitleaks) installed, and blocks commits that stage secrets.
-
-## Windows DevBox
-
-A modular PowerShell 7 profile. `profile.ps1` is the `$PROFILE` entry point. It dot-sources every `conf.d/*.ps1` file, then every `profile.d/*.ps1` file, each in name order, so you can enable or disable a feature by adding or removing a file.
-
-| File | Purpose |
-| --- | --- |
-| `conf.d/00-environment.ps1` | UTF-8 encoding, `EDITOR`/`PAGER`, `WORKON_HOME`, `bin/` on `PATH`, merged `KUBECONFIG` |
-| `conf.d/10-psreadline.ps1` | PSReadLine: history prediction, Emacs mode, key bindings |
-| `conf.d/20-completions.ps1` | Tab completion via Carapace and native tool completers, cached by binary mtime |
-| `conf.d/30-aliases.ps1` | Wrappers for eza, git, kubectl, docker, helm, and terraform/tofu |
-| `conf.d/40-functions.ps1` | Profile management (`reload`, `editp`), `goto` bookmarks, uv virtualenv helpers |
-| `conf.d/50-init.ps1` | zoxide and Starship init. Must load last because Starship overwrites the prompt |
-
-Other contents:
-
-- `profile.d/100-ansible-wsl.ps1`: runs `ansible*` commands inside WSL (Debian, pyenv `dev` env) and translates Windows paths to `/mnt/<drive>/...`. Override the defaults by setting `$script:AnsibleWslDistro` and `$script:AnsiblePyenvEnv` before it loads.
-- `bin/Update-System.ps1`: one-shot updater for Windows Update, winget, WSL, and disk cleanup. Run it as administrator. Use `-Windows`, `-Winget`, `-WSL`, or `-DiskCleanup` to run a single step.
-- `starship.toml`: Catppuccin-themed Starship prompt.
-- `powershell.config.json`: sets the execution policy to `RemoteSigned`.
-- `Modules/`: vendored PowerShell modules (Catppuccin, PSWindowsUpdate, QRCodeGenerator, powershell-yaml). Git-ignored and not in the repo; bootstrap will install them from a pinned manifest.
-
-### Setup
-
-Copy or symlink the contents of `Windows DevBox/` into the directory that holds your `$PROFILE`. Run `Split-Path $PROFILE -Parent` in pwsh to find it. Rename `profile.ps1` to match `$PROFILE`, usually `Microsoft.PowerShell_profile.ps1`.
-
-Optional tools the profile uses when they are installed: eza, zoxide, Starship, Carapace, kubectl, helm, docker, gh, terraform/tofu, uv.
+Bootstrap enables the secrets hook. On a clone you did not bootstrap, run `git config core.hooksPath .githooks`; it needs [gitleaks](https://github.com/gitleaks/gitleaks) installed.

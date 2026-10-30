@@ -1,0 +1,8 @@
+completions-compinit|zsh|20-completions.ps1: tiers|compinit runs once per session and writes the dump into the cache dir
+completions-menu-select|zsh|n/a|Tab opens a selectable completion menu (zstyle menu select); Shift+Tab reverses
+completions-dump-cache|zsh|n/a|a dump under 24h old is reused (compinit -C); an older one is rebuilt
+completions-native-cached|zsh|20-completions.ps1: tier 2|kubectl/helm/gh/docker use their verified zsh flags, generate once, then load from cache
+completions-regen-newer|zsh|20-completions.ps1: cache invalidation|a binary newer than its cache regenerates it
+completions-carapace|zsh|20-completions.ps1: tier 1|carapace is cached and loads before the native completers
+completions-aws|zsh|20-completions.ps1: tier 3 (aws)|aws gets bashcompinit plus aws_completer only when aws_completer exists
+completions-missing-silent|zsh|n/a|no completion tools: no errors, no cache files, compinit still works
