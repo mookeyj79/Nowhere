@@ -87,7 +87,7 @@ scenario_core_reload() {
 }
 scenario_core_update() {
     reset_session; SESSION_TOOLS=""
-    session server 'update; echo "code=$?"'
+    session server 'NowhereProfileDir=$HOME/nowhere-empty; update; echo "code=$?"'
     assert_line "$OUT" code=1; assert_match "$ERR" 'update'
     # with the script present (ticket #19 provides it) update runs it
     reset_session; SESSION_TOOLS=""; SESSION_REAL="mkdir chmod"
