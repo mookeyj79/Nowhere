@@ -45,6 +45,40 @@ Describe 'update' {
         $r = Invoke-NowhereSession -Role server -Probe '(Get-Alias update).ResolvedCommand.Name'
         $r.Output | Should -Contain 'Update-System'
     }
+    It 'Update-Uv runs uv self update when uv exists' {
+        $r = Invoke-NowhereSession -Role server -Tools uv -Probe 'Update-Uv'
+        $r.Errors | Should -BeNullOrEmpty
+        ($r.Output -join ' ') | Should -Match 'uv self update'
+    }
+    It 'Update-Uv skips quietly when uv is absent' {
+        $r = Invoke-NowhereSession -Role server -Tools @() -Probe 'Update-Uv'
+        $r.Errors | Should -BeNullOrEmpty
+        ($r.Output -join ' ') | Should -Match 'uv not found'
+    }
+    It 'Update-PinnedModules installs exactly the pinned versions, never floating' {
+        $probe = 'function Get-Module { }; function Install-Module { "INSTALL $($args -join '' '')" }; Update-PinnedModules'
+        $r = Invoke-NowhereSession -Role server -Probe $probe
+        $r.Errors | Should -BeNullOrEmpty
+        $pins = (Get-Content (Join-Path $script:RepoRoot 'powershell/modules.json') -Raw | ConvertFrom-Json).modules
+        foreach ($m in $pins) {
+            ($r.Output -join "`n") | Should -Match "INSTALL -Name $($m.name) -RequiredVersion $([regex]::Escape($m.version))"
+        }
+    }
+    It 'Update-PinnedModules leaves modules already at the pin alone' {
+        $probe = 'function Get-Module { [pscustomobject]@{ Version = [version](Get-Content (Join-Path $global:NowhereRepoDir ''powershell/modules.json'') -Raw | ConvertFrom-Json).modules[0].version } }; function Install-Module { "INSTALL $($args -join '' '')" }; Update-PinnedModules'
+        $r = Invoke-NowhereSession -Role server -Probe $probe
+        ($r.Output -join "`n") | Should -Not -Match 'INSTALL -Name PSReadLine'
+    }
+    It 'Update-PSProfile does not float modules with Update-Module' {
+        $text = Get-Content (Join-Path $script:RepoRoot 'powershell/core/conf.d/40-profile.ps1') -Raw
+        $text | Should -Not -Match 'Update-Module'
+        $text | Should -Match 'Update-PinnedModules'
+    }
+    It 'Update-System runs uv and pinned-module refresh' {
+        $text = Get-Content (Join-Path $script:RepoRoot 'powershell/core/bin/Update-System.ps1') -Raw
+        $text | Should -Match 'Update-Uv'
+        $text | Should -Match 'Update-PinnedModules'
+    }
 }
 
 Describe 'shared Macchiato starship config' {

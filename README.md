@@ -6,7 +6,7 @@ My personal shell environment: one setup that feels the same on every machine I 
 
 Four roles: Windows DevBox, Windows Server, Linux DevBox, Linux Server. A **core** layer is shared by all four; the **dev layer** is added only on a DevBox. Servers also get the `server-motd` login banner.
 
-| Role | Shell | Layers | Bootstrap | `EDITOR` | Extras |
+| Role | Shell | Layers | Bootstrap | `EDITOR` | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Windows DevBox | PowerShell 7 | core + dev | `bootstrap/bootstrap.ps1 devbox` | `code --wait` | kubectl/helm/docker/terraform/tofu aliases, Ansible via WSL |
 | Windows Server | PowerShell 7 | core | `bootstrap/bootstrap.ps1 server` | `nano` | `server-motd` at login, `update` = Windows Update + winget |
@@ -29,9 +29,11 @@ pwsh -File bootstrap/bootstrap.ps1 devbox     # or: server
 bash bootstrap/bootstrap.sh devbox            # or: server
 ```
 
-Bootstrap, in order: installs tools from `shared/tools.json` (winget on Windows, apt plus a checksum-pinned gitleaks release on Linux; core always, dev tools on a devbox), installs `uv` with Astral's official installer if absent, installs pinned PowerShell modules or ZSH plugins, writes the **stub**, seeds the **local override**, points `core.hooksPath` at `.githooks` (the gitleaks pre-commit hook), and on a server installs `server-motd`. Open a new shell afterwards.
+Bootstrap, in order: installs tools from `shared/tools.json` (winget on Windows, apt plus checksum-pinned release binaries on Linux: starship, carapace and gitleaks, and on a devbox helm, terraform and tofu; core always, dev tools on a devbox), installs `uv` with Astral's official installer if absent, installs pinned PowerShell modules or ZSH plugins, writes the **stub**, seeds the **local override**, points `core.hooksPath` at `.githooks` (the gitleaks pre-commit hook), and on a server installs `server-motd`. Open a new shell afterwards.
 
 If a tool, module or plugin is missing, the profile starts silently and prints one hint to run bootstrap.
+
+`code` (VS Code) has no headless Linux install route, so on a Linux DevBox it is **devbox-manual**: install it by hand. The dev layer skips it when absent, and the `EDITOR` default of `code --wait` only makes sense once it is there. Every core tool has a route, so the "run bootstrap" hint clears after bootstrap.
 
 Windows Server 2022 and older have no winget: bootstrap warns, skips only the core tool install, and carries on; install the listed tools by hand or use a Server 2025 image.
 
@@ -60,18 +62,18 @@ conf.d numbering (same on both shells): `00` environment, `10` line editor, `20`
 Servers show `server-motd`, installed with `uv tool install server-motd==<pin>` (pin in `shared/tools.json` under `uvTools`). `server-motd install-profile` and `uninstall-profile` are not used on Nowhere machines, so the hook has a single owner:
 
 - Windows Server: the PowerShell profile (`60-motd.ps1`) runs it on the `server` role. Config at `%ProgramData%\server-motd\config.toml`.
-- Linux Server: bootstrap writes `/etc/update-motd.d/50-server-motd`, which runs the binary by absolute path. Config at `/etc/server-motd/config.toml`. The ZSH profile never calls it.
+- Linux Server: bootstrap writes `/etc/update-motd.d/50-server-motd`, which runs the binary by absolute path. Config at `/etc/server-motd/config.toml`. The ZSH profile never calls it. The hook runs as root, so on Linux `server-motd` is installed system-wide with sudo (`UV_TOOL_DIR=/opt/nowhere/uv-tools`, binary in `/usr/local/bin`, both root-owned) instead of under the installing user's home, where root would be running a user-writable file. The hook also exits quietly if the binary is missing, so a broken install cannot break a login.
 
 Both configs are seeded from `shared/server-motd/config.toml.example`, mode owner-only, never overwritten. DevBoxes never show the MOTD.
 
 ## `update`
 
-The common maintenance name. On Windows it runs `Update-System` (Windows Update, winget, WSL, disk cleanup; a server runs Windows Update and winget by default, `-WSL` and `-DiskCleanup` are explicit). On Linux it runs `zsh/core/bin/update` (apt, ZSH plugins at their pinned SHAs, `uv self update`). It is the only thing besides bootstrap that installs or upgrades.
+The one maintenance name on every role. On Windows it runs `Update-System` (Windows Update, winget, `uv self update` and the PowerShell modules at their pinned versions, WSL, disk cleanup; a server runs Windows Update and winget by default, `-WSL` and `-DiskCleanup` are explicit). On Linux it runs `zsh/core/bin/update` (apt, ZSH plugins at their pinned SHAs, `uv self update`). It is the only thing besides bootstrap that installs or upgrades.
 
 ## Tests
 
 - `tests/zsh/run.sh`: real `zsh` against a throwaway HOME with a fake apt/curl. Needs `zsh` and `jq`. Run `bash tests/zsh/run.sh [scenario-id ...]`.
-- `tests/powershell/`: Pester 5.5+ against a real `pwsh` in a throwaway HOME. Run `Invoke-Pester tests/powershell` (slow, several minutes).
+- `tests/powershell/`: Pester 5.5+ against a real `pwsh` in a throwaway HOME. Run `Invoke-Pester tests/powershell` (slow, several minutes). Pester result files (`testResults.xml`) are git-ignored; CI writes its own to the runner's temp directory.
 - `tests/scenarios.txt` lists the shared scenario ids and their pwsh counterparts. `tests/parity.txt` is the one list **both** suites read (`Parity.Tests.ps1` and `scenarios-parity.sh`): core command names, role gating, `EDITOR` defaults, and missing-tool silence must be identical in pwsh and zsh. Add a line there to extend the parity contract.
 - CI (`.github/workflows/gitleaks.yml`) runs gitleaks, shellcheck, Pester on Windows and the zsh harness on Ubuntu.
 

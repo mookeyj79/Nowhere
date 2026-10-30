@@ -29,6 +29,9 @@ boot-hooks|both|Bootstrap.Tests: git hooks|core.hooksPath set
 boot-idempotent|both|Bootstrap.Tests: idempotence|second run changes nothing
 boot-gitleaks-release|zsh|n/a (winget carries gitleaks)|pinned gitleaks release binary installed once
 boot-gitleaks-badsum|zsh|n/a|checksum mismatch aborts and installs nothing
+boot-release-core|zsh|n/a (winget carries them)|starship, carapace and gitleaks come from pinned releases, each downloaded once
+boot-release-dev|zsh|n/a (winget carries them)|devbox adds helm, terraform (zip) and tofu from pinned releases; server does not
+boot-linux-routes|zsh|n/a|every core tool has an apt, release or installer route on Linux; code is documented devbox-manual
 boot-plugins-pinned|zsh|n/a (pinned modules instead)|plugins cloned at pinned SHAs; drift corrected
 core-eza-aliases|zsh|Profile.Tests: core aliases / eza|ls ll la lt llt exist only with eza
 core-git-aliases|zsh|Profile.Tests: core aliases / git|every g* alias present with the PowerShell flags

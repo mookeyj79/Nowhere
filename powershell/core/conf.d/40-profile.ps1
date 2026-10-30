@@ -20,12 +20,8 @@ function Edit-Profile {
 Set-Alias -Name editp -Value Edit-Profile
 
 function Update-PSProfile {
-    Write-Host 'Updating PowerShell modules...' -ForegroundColor Cyan
-    Get-InstalledModule | ForEach-Object {
-        Write-Host "  -> $($_.Name)" -ForegroundColor DarkGray
-        try { Update-Module $_.Name -Scope CurrentUser -ErrorAction Stop }
-        catch { Write-Warning "    $_" }
-    }
+    Write-Host 'Updating PowerShell modules (to their pins)...' -ForegroundColor Cyan
+    Update-PinnedModules
     if (Get-Command winget -ErrorAction SilentlyContinue) {
         Write-Host 'Updating winget packages...' -ForegroundColor Cyan
         winget upgrade --all --include-unknown --silent

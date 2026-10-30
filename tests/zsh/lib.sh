@@ -28,12 +28,15 @@ new_dir() {
 # --- assertions (a failing one ends the scenario subshell) ---------------------
 fail() { echo "    FAIL: $*" >&2; exit 1; }
 assert_eq() { [ "$1" = "$2" ] || fail "${3:-values differ}: expected [$2], got [$1]"; }
-assert_line() { printf '%s\n' "$1" | grep -qxF -- "$2" || fail "output lacks line [$2]; output was: $1"; }
-assert_no_line() { ! printf '%s\n' "$1" | grep -qxF -- "$2" || fail "output unexpectedly has line [$2]"; }
+# Assertions feed grep through a here-string, never a pipe: run.sh uses pipefail,
+# and `printf | grep -q` makes printf die of SIGPIPE when grep exits at the first
+# match, which failed a scenario at random (core-venv-activate).
+assert_line() { grep -qxF -- "$2" <<< "$1" || fail "output lacks line [$2]; output was: $1"; }
+assert_no_line() { ! grep -qxF -- "$2" <<< "$1" || fail "output unexpectedly has line [$2]"; }
 assert_empty() { [ -z "$1" ] || fail "${2:-expected empty}: [$1]"; }
 assert_file() { [ -e "$1" ] || fail "missing $1"; }
 assert_no_file() { [ ! -e "$1" ] || fail "unexpected $1"; }
-assert_match() { printf '%s' "$1" | grep -qE -- "$2" || fail "[$1] does not match /$2/"; }
+assert_match() { grep -qE -- "$2" <<< "$1" || fail "[$1] does not match /$2/"; }
 count_matching() { printf '%s\n' "$1" | grep -c -- "$2" || true; }
 
 # --- zsh session sandbox --------------------------------------------------------
@@ -84,6 +87,7 @@ session() {
 new_bootstrap_sandbox() {
     BS_ROOT=$(new_dir); BS_BIN=$BS_ROOT/fakebin; BS_CLONE=$BS_ROOT/clone; BS_HOME=$BS_ROOT/home
     mkdir -p "$BS_BIN" "$BS_HOME" "$BS_CLONE"
+    BS_FAKE_SHAS=()
 
     # Fake apt-get / dpkg: installed.txt is the "installed packages" database.
     cat > "$BS_BIN/dpkg" << 'EOF'
@@ -97,7 +101,8 @@ echo "apt-get $*" >> "$FAKE_BIN/apt.log"
 exit 0
 EOF
     printf '#!/bin/sh\nexec "$@"\n' > "$BS_BIN/sudo"
-    # Fake curl: gitleaks tarball for release URLs, a tiny script for the uv installer.
+    # Fake curl: a fake archive per release tool (matched by tool name in the URL),
+    # a tiny script for the uv installer.
     cat > "$BS_BIN/curl" << 'EOF'
 #!/bin/sh
 out=""; prev=""; url=""
@@ -107,35 +112,59 @@ for a in "$@"; do
 done
 echo "$url" >> "$FAKE_BIN/curl.log"
 case "$url" in
-    *gitleaks*) cp "$FAKE_BIN/gitleaks.tar.gz" "$out" ;;
     *astral.sh*) printf 'cp "%s/uv.fake" "%s/uv"\n' "$FAKE_BIN" "$FAKE_BIN" > "$out" ;;
-    *) exit 22 ;;
+    *)
+        for f in "$FAKE_BIN"/rel/*; do
+            n=${f##*/}
+            case "$url" in *"$n"*) cp "$f" "$out"; exit 0 ;; esac
+        done
+        exit 22 ;;
 esac
 EOF
-    # Fake uv (what the "installer" drops): logs calls, keeps a tool list, bin dir under FAKE_BIN.
+    # Fake uv (what the "installer" drops): logs calls and keeps a tool list and bin dir
+    # under UV_TOOL_DIR / UV_TOOL_BIN_DIR, like the real uv (bootstrap sets both).
     cat > "$BS_BIN/uv.fake" << 'EOF'
 #!/bin/sh
 echo "uv $*" >> "$FAKE_BIN/uv.log"
+[ -z "$UV_TOOL_DIR" ] || echo "uv $* [dir=$UV_TOOL_DIR bin=$UV_TOOL_BIN_DIR]" >> "$FAKE_BIN/uv.env.log"
 case "$1 $2" in
-    "tool list") cat "$FAKE_BIN/uvtools.txt" 2> /dev/null ;;
+    "tool list") cat "$UV_TOOL_DIR/uvtools.txt" 2> /dev/null ;;
     "tool install")
         n=${3%%==*}; v=${3#*==}
-        echo "$n v$v" >> "$FAKE_BIN/uvtools.txt"
-        mkdir -p "$FAKE_BIN/uvbin"; printf '#!/bin/sh\necho %s motd\n' "$n" > "$FAKE_BIN/uvbin/$n"; chmod +x "$FAKE_BIN/uvbin/$n" ;;
-    "tool dir") echo "$FAKE_BIN/uvbin" ;;
+        mkdir -p "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR"
+        echo "$n v$v" >> "$UV_TOOL_DIR/uvtools.txt"
+        printf '#!/bin/sh\necho %s motd\n' "$n" > "$UV_TOOL_BIN_DIR/$n"; chmod +x "$UV_TOOL_BIN_DIR/$n" ;;
 esac
 EOF
     BS_MOTD_DIR=$BS_ROOT/update-motd.d; BS_MOTD_CONF=$BS_ROOT/etc-server-motd
+    BS_UVTOOL_DIR=$BS_ROOT/opt-uv-tools; BS_UVTOOL_BIN=$BS_ROOT/usr-local-bin
     chmod +x "$BS_BIN/dpkg" "$BS_BIN/apt-get" "$BS_BIN/sudo" "$BS_BIN/curl" "$BS_BIN/uv.fake"
 
-    # A fake gitleaks release tarball matching the pinned version.
-    local ver
-    ver=$(jq -r '.tools[] | select(.name == "gitleaks") | .release.version' "$REPO_ROOT/shared/tools.json")
-    mkdir -p "$BS_ROOT/tarsrc"
-    printf '#!/bin/sh\necho %s\n' "$ver" > "$BS_ROOT/tarsrc/gitleaks"
-    chmod +x "$BS_ROOT/tarsrc/gitleaks"
-    tar -czf "$BS_BIN/gitleaks.tar.gz" -C "$BS_ROOT/tarsrc" gitleaks
-    FAKE_SHA=$(sha256sum "$BS_BIN/gitleaks.tar.gz" | cut -d' ' -f1)
+    # A fake release archive per manifest 'release' tool, in the manifest's own
+    # archive format, holding the member path (for both arch spellings) that
+    # prints "<name> <pinned version>" for any arguments.
+    local rname rver rarch rmember rfmt m
+    mkdir -p "$BS_BIN/rel"
+    while IFS=$'\t' read -r rname rver rfmt rmember; do
+        mkdir -p "$BS_ROOT/arsrc/$rname"
+        for rarch in $(jq -r --arg n "$rname" '.tools[] | select(.name == $n) | (.release.arch // {x64: "x64", arm64: "arm64"}) | .[]' "$REPO_ROOT/shared/tools.json"); do
+            m=${rmember//\{version\}/$rver}; m=${m//\{arch\}/$rarch}
+            mkdir -p "$BS_ROOT/arsrc/$rname/$(dirname "$m")"
+            printf '#!/bin/sh\necho %s %s\n' "$rname" "$rver" > "$BS_ROOT/arsrc/$rname/$m"
+            chmod +x "$BS_ROOT/arsrc/$rname/$m"
+        done
+        if [ "$rfmt" = zip ]; then
+            (cd "$BS_ROOT/arsrc/$rname" && python3 -c 'import sys, zipfile, os
+z = zipfile.ZipFile(sys.argv[1], "w")
+for d, _, fs in os.walk("."):
+    for f in fs:
+        z.write(os.path.join(d, f), os.path.relpath(os.path.join(d, f), "."))' "$BS_BIN/rel/$rname")
+        else
+            # members without a leading ./, like the real archives
+            (cd "$BS_ROOT/arsrc/$rname" && find . -type f -printf '%P\n' | tar -czf "$BS_BIN/rel/$rname" -T -)
+        fi
+        BS_FAKE_SHAS+=("$rname=$(sha256sum "$BS_BIN/rel/$rname" | cut -d' ' -f1)")
+    done < <(jq -r '.tools[] | select(.release) | [.name, .release.version, (.release.archive // "tar.gz"), (.release.member // .name)] | @tsv' "$REPO_ROOT/shared/tools.json")
 
     # A minimal clone: the real bootstrap, manifests and example, in a fresh git repo.
     local p
@@ -143,9 +172,12 @@ EOF
         mkdir -p "$BS_CLONE/$(dirname "$p")"
         cp -r "$REPO_ROOT/$p" "$BS_CLONE/$p"
     done
-    # Pin the fake tarball's checksum for every arch, so any host passes.
-    jq --arg s "$FAKE_SHA" '(.tools[] | select(.release) | .release.sha256[]) |= $s' \
-        "$BS_CLONE/shared/tools.json" > "$BS_ROOT/t.json" && mv "$BS_ROOT/t.json" "$BS_CLONE/shared/tools.json"
+    # Pin each fake archive's checksum for every arch, so any host passes.
+    local kv
+    for kv in "${BS_FAKE_SHAS[@]}"; do
+        jq --arg n "${kv%%=*}" --arg s "${kv#*=}" '(.tools[] | select(.name == $n) | .release.sha256[]) |= $s' \
+            "$BS_CLONE/shared/tools.json" > "$BS_ROOT/t.json" && mv "$BS_ROOT/t.json" "$BS_CLONE/shared/tools.json"
+    done
     # Plugins: local one-commit repos instead of GitHub, same names, pinned by real SHA.
     local names n repo sha
     names=$(jq -r '.plugins[].name' "$REPO_ROOT/zsh/plugins.json")
@@ -169,6 +201,7 @@ run_bootstrap() {
     BS_CODE=0
     BS_OUT=$(env -i HOME="$BS_HOME" PATH="$BS_BIN:/usr/bin:/bin" FAKE_BIN="$BS_BIN" GIT_CONFIG_NOSYSTEM=1 \
         NOWHERE_MOTD_DIR="$BS_MOTD_DIR" NOWHERE_MOTD_CONFIG_DIR="$BS_MOTD_CONF" \
+        NOWHERE_UVTOOL_DIR="$BS_UVTOOL_DIR" NOWHERE_UVTOOL_BIN_DIR="$BS_UVTOOL_BIN" \
         bash "$BS_CLONE/bootstrap/bootstrap.sh" "$@" 2>&1) || BS_CODE=$?
 }
 

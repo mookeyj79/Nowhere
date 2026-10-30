@@ -26,7 +26,13 @@ jobs:
         run: |
           Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
           Import-Module Pester -MinimumVersion 5.5
-          Invoke-Pester tests/powershell -Output Detailed -CI
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path = 'tests/powershell'
+          $cfg.Run.Exit = $true
+          $cfg.Output.Verbosity = 'Detailed'
+          $cfg.TestResult.Enabled = $true
+          $cfg.TestResult.OutputPath = Join-Path $env:RUNNER_TEMP 'testResults.xml'
+          Invoke-Pester -Configuration $cfg
   zsh:
     runs-on: ubuntu-latest
     steps:

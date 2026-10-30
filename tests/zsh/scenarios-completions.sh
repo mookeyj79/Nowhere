@@ -36,6 +36,14 @@ scenario_completions_compinit() {
     assert_line "$OUT" compdef=1; assert_line "$OUT" mode=fresh; assert_empty "$ERR"
     assert_file "$CS_SB/$CS_CACHE/zcompdump"
 }
+scenario_completions_menu_select() {
+    CS_TOOLS=""
+    csession 'zstyle -s ":completion:*" menu m; echo "menu=$m"; bindkey "^I"; bindkey "^[[Z"'
+    assert_empty "$ERR"
+    assert_line "$OUT" 'menu=select'
+    assert_line "$OUT" '"^I" menu-complete'
+    assert_line "$OUT" '"^[[Z" reverse-menu-complete'
+}
 scenario_completions_dump_cache() {
     CS_TOOLS=""
     csession ':'

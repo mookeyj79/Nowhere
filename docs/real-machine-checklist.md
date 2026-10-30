@@ -24,7 +24,7 @@ The sandboxed suites (`tests/`) prove the files and the shared parity list. They
 - [ ] Pinned modules from `powershell/modules.json` are installed (`Get-Module -ListAvailable`).
 - [ ] Dev layer: `topl` (with tofu), `tfp`, `kgp`, `dcup` exist only when their tools are installed.
 - [ ] `ansible-playbook --version` runs inside the WSL distro named in the override (default `debian`); a Windows path argument is translated.
-- [ ] `update` (as administrator) runs Windows Update, winget, WSL and disk cleanup and reports each step.
+- [ ] `update` (as administrator) runs Windows Update, winget, `uv self update` plus pinned modules, WSL and disk cleanup and reports each step.
 - [ ] No MOTD banner is shown.
 
 ## Windows Server
@@ -42,7 +42,7 @@ The sandboxed suites (`tests/`) prove the files and the shared parity list. They
 - [ ] `~/.zshrc` stub sets `NOWHERE_ROLE=devbox`; `echo $SHELL` is zsh (run `chsh -s $(command -v zsh)` if not).
 - [ ] ZSH plugins exist at the pinned SHAs under `~/.local/share/nowhere/plugins` (autosuggestions, substring search, syntax highlighting with the Macchiato theme).
 - [ ] Syntax highlighting uses Macchiato colours; typing an invalid command turns red.
-- [ ] Dev layer aliases (`topl`, `tfp`, `kgp`, `dcup`) exist only with their tools; tools with no apt package (helm, terraform, tofu, code) are skipped without errors.
+- [ ] Dev layer aliases (`topl`, `tfp`, `kgp`, `dcup`) exist only with their tools; helm, terraform and tofu came from the pinned releases (`~/.local/bin`); `code` is devbox-manual (install it by hand) and is skipped without errors until you do.
 - [ ] `bat`/`fd` work even though Debian names them `batcat`/`fdfind`.
 - [ ] `update` runs apt, moves plugins to their pins, and runs `uv self update`; a failing step does not stop the others.
 - [ ] No MOTD banner from Nowhere is shown.
@@ -51,10 +51,10 @@ The sandboxed suites (`tests/`) prove the files and the shared parity list. They
 
 - [ ] `~/.zshrc` stub sets `NOWHERE_ROLE=server`; dev aliases are absent.
 - [ ] `server-motd` is installed at the pinned version; `/etc/server-motd/config.toml` exists, mode 600.
-- [ ] `/etc/update-motd.d/50-server-motd` exists, root-owned, mode 755, and runs the binary by absolute path.
+- [ ] `/etc/update-motd.d/50-server-motd` exists, root-owned, mode 755, and runs the binary by absolute path. The binary is `/usr/local/bin/server-motd` and is root-owned (not under a user's home); the hook exits silently if it is removed.
 - [ ] A fresh SSH login (PAM session) shows the MOTD exactly once. The ZSH profile prints no second banner.
 - [ ] Non-interactive SSH commands (`ssh host true`) print nothing extra.
-- [ ] Debian 13+ or Ubuntu 24.04+: the apt installs (notably eza and hexyl) succeeded.
+- [ ] Debian 13+ or Ubuntu 24.04+: the apt installs (notably eza and hexyl) succeeded, and starship, carapace and gitleaks are in `~/.local/bin` from the pinned releases. A new shell prints no "run bootstrap" hint.
 - [ ] `update` runs apt, plugin pins and `uv self update`.
 
 ## Cross-role feel check
