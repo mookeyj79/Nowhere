@@ -1,0 +1,6 @@
+dev-aliases-all|zsh|Profile.Tests: dev aliases|k* h dc* dps tf* to* (with topl) exist on devbox with every tool, none on server
+dev-aliases-run|zsh|Profile.Tests: dev aliases|aliases expand to the PowerShell commands (topl is tofu plan)
+dev-tool-gating|zsh|Profile.Tests: dev aliases / presence|each family and kns appear only when its tool is present
+dev-kns|zsh|Profile.Tests: dev helpers / kns|kns sets the namespace, d and default map to default; absent on server
+dev-editor|zsh|Profile.Tests: dev environment|devbox EDITOR and VISUAL are code --wait, local override wins, server stays nano
+dev-boot-tools|zsh|n/a (apt on Linux)|bootstrap devbox installs kubectl docker gh packages; server installs none
