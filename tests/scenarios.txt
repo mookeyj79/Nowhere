@@ -46,3 +46,4 @@ core-env|zsh|Profile.Tests: environment|PAGER LESS EDITOR defaults and local ove
 core-init-cache|zsh|Profile.Tests: init|zoxide and starship init cached under the XDG cache, shared starship.toml used
 core-init-regen|zsh|Profile.Tests: init cache|cache reused until the binary is newer
 core-init-absent|zsh|Profile.Tests: init|no zoxide or starship: no init, no errors
+parity|both|Parity.Tests: parity list|tests/parity.txt read by both suites: identical core command names, role gating, EDITOR defaults, missing-tool silence

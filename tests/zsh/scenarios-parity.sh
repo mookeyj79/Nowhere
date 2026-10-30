@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2016,SC2034
+# Cross-shell parity: consumes tests/parity.txt, the same list
+# tests/powershell/Parity.Tests.ps1 consumes. One zsh session per role+tools group.
+
+scenario_parity() {
+    local file=$REPO_ROOT/tests/parity.txt
+    local rows groups bad=0 checked=0
+    rows=$(grep -v -e '^#' -e '^$' "$file" | awk -F'|' '$2 == "both" || $2 == "zsh"')
+    [ -n "$rows" ] || fail "no parity rows for zsh"
+    groups=$(printf '%s\n' "$rows" | awk -F'|' '{print $3 "|" $4}' | sort -u)
+    local role tools probe id r t check arg expect got
+    while IFS='|' read -r role tools; do
+        probe=''
+        while IFS='|' read -r id _ r t check arg expect; do
+            [ "$r|$t" = "$role|$tools" ] || continue
+            case "$check" in
+                cmd) probe+="whence -- '$arg' > /dev/null 2>&1 && echo 'P:$id=present' || echo 'P:$id=absent'; " ;;
+                env) probe+="echo \"P:$id=\$$arg\"; " ;;
+                hint) ;;
+                *) fail "unknown check $check ($id)" ;;
+            esac
+        done <<< "$rows"
+        reset_session
+        if [ "$tools" = - ]; then SESSION_TOOLS=''; else SESSION_TOOLS=${tools//,/ }; fi
+        session "$([ "$role" = unset ] && echo '' || echo "$role")" "${probe}echo done"
+        [ -z "$ERR" ] || { echo "    parity [$role|$tools]: stderr: $ERR" >&2; bad=1; }
+        while IFS='|' read -r id _ r t check arg expect; do
+            [ "$r|$t" = "$role|$tools" ] || continue
+            checked=$((checked + 1))
+            if [ "$check" = hint ]; then
+                got=$(count_matching "$OUT" 'run bootstrap')
+            else
+                got=$(printf '%s\n' "$OUT" | sed -n "s/^P:$id=//p")
+            fi
+            [ "$got" = "$expect" ] || { echo "    parity $id: expected [$expect], got [$got]" >&2; bad=1; }
+        done <<< "$rows"
+    done <<< "$groups"
+    [ "$checked" -gt 0 ] || fail "nothing checked"
+    [ "$bad" -eq 0 ]
+}
