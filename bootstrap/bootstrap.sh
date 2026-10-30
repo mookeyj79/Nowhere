@@ -9,6 +9,8 @@
 #    1. tools from shared/tools.json via apt (core always, dev on devbox)
 #    2. pinned release binaries (gitleaks) into ~/.local/bin, sha256-checked
 #    3. uv via Astral's official installer, only when not on PATH
+#    3b. server only: server-motd via `uv tool install` at the manifest pin,
+#       config seeded (no overwrite, 600), root-owned update-motd.d hook
 #    4. zsh plugins cloned at pinned SHAs into ~/.local/share/nowhere/plugins
 #    5. ~/.zshrc stub (a different existing stub is backed up)
 #    6. local override seeded from local.zsh.example if missing, mode 600
@@ -105,6 +107,34 @@ if [ "$WANT_UV" -gt 0 ] && ! command -v uv > /dev/null 2>&1; then
     curl -fsSL -o "$TMP/uv-install.sh" https://astral.sh/uv/install.sh || die "uv installer download failed"
     sh "$TMP/uv-install.sh"
 fi
+
+# --- 3b. uv tools (server-motd on servers) -------------------------------------
+# The MOTD banner is printed by a root-owned /etc/update-motd.d hook at login,
+# never by the zsh profile (that would print it twice).
+MOTD_DIR=${NOWHERE_MOTD_DIR:-/etc/update-motd.d}
+MOTD_CONFIG_DIR=${NOWHERE_MOTD_CONFIG_DIR:-/etc/server-motd}
+while IFS=$'\t' read -r name version; do
+    command -v uv > /dev/null 2>&1 || die "uv not found; cannot install $name"
+    if ! uv tool list 2> /dev/null | grep -qE "^$name v${version//./\\.}( |\$)"; then
+        step "installing $name $version (uv tool)"
+        uv tool install "$name==$version" || die "uv tool install $name failed"
+    fi
+    if [ "$name" = server-motd ]; then
+        MOTD_BIN=$(uv tool dir --bin)/$name
+        [ -x "$MOTD_BIN" ] || die "$name not found at $MOTD_BIN after install"
+        if ! $SUDO test -e "$MOTD_CONFIG_DIR/config.toml"; then
+            $SUDO install -D -m 600 "$REPO_ROOT/shared/server-motd/config.toml.example" "$MOTD_CONFIG_DIR/config.toml"
+            step "seeded $MOTD_CONFIG_DIR/config.toml (owner-only)"
+        fi
+        # update-motd.d runs with a bare environment (no ~/.local/bin on PATH, no
+        # HOME), so the hook calls the binary by the absolute path found above.
+        printf '#!/bin/sh\nPATH=/usr/local/bin:/usr/bin:/bin\nexec '"'%s'"'\n' "$MOTD_BIN" > "$TMP/50-server-motd"
+        if ! $SUDO cmp -s "$TMP/50-server-motd" "$MOTD_DIR/50-server-motd"; then
+            $SUDO install -D -m 755 "$TMP/50-server-motd" "$MOTD_DIR/50-server-motd"
+            step "wrote $MOTD_DIR/50-server-motd"
+        fi
+    fi
+done < <(jq -r --arg r "$ROLE" '.uvTools[]? | select(.roles | index($r)) | [.name, .version] | @tsv' "$MANIFEST")
 
 # --- 4. Pinned zsh plugins ----------------------------------------------------
 while IFS=$'\t' read -r name repo sha; do

@@ -108,11 +108,25 @@ done
 echo "$url" >> "$FAKE_BIN/curl.log"
 case "$url" in
     *gitleaks*) cp "$FAKE_BIN/gitleaks.tar.gz" "$out" ;;
-    *astral.sh*) printf 'touch "%s/uv"; chmod +x "%s/uv"\n' "$FAKE_BIN" "$FAKE_BIN" > "$out" ;;
+    *astral.sh*) printf 'cp "%s/uv.fake" "%s/uv"\n' "$FAKE_BIN" "$FAKE_BIN" > "$out" ;;
     *) exit 22 ;;
 esac
 EOF
-    chmod +x "$BS_BIN/dpkg" "$BS_BIN/apt-get" "$BS_BIN/sudo" "$BS_BIN/curl"
+    # Fake uv (what the "installer" drops): logs calls, keeps a tool list, bin dir under FAKE_BIN.
+    cat > "$BS_BIN/uv.fake" << 'EOF'
+#!/bin/sh
+echo "uv $*" >> "$FAKE_BIN/uv.log"
+case "$1 $2" in
+    "tool list") cat "$FAKE_BIN/uvtools.txt" 2> /dev/null ;;
+    "tool install")
+        n=${3%%==*}; v=${3#*==}
+        echo "$n v$v" >> "$FAKE_BIN/uvtools.txt"
+        mkdir -p "$FAKE_BIN/uvbin"; printf '#!/bin/sh\necho %s motd\n' "$n" > "$FAKE_BIN/uvbin/$n"; chmod +x "$FAKE_BIN/uvbin/$n" ;;
+    "tool dir") echo "$FAKE_BIN/uvbin" ;;
+esac
+EOF
+    BS_MOTD_DIR=$BS_ROOT/update-motd.d; BS_MOTD_CONF=$BS_ROOT/etc-server-motd
+    chmod +x "$BS_BIN/dpkg" "$BS_BIN/apt-get" "$BS_BIN/sudo" "$BS_BIN/curl" "$BS_BIN/uv.fake"
 
     # A fake gitleaks release tarball matching the pinned version.
     local ver
@@ -125,7 +139,7 @@ EOF
 
     # A minimal clone: the real bootstrap, manifests and example, in a fresh git repo.
     local p
-    for p in bootstrap shared/tools.json zsh/plugins.json zsh/local.zsh.example .githooks; do
+    for p in bootstrap shared/tools.json shared/server-motd zsh/plugins.json zsh/local.zsh.example .githooks; do
         mkdir -p "$BS_CLONE/$(dirname "$p")"
         cp -r "$REPO_ROOT/$p" "$BS_CLONE/$p"
     done
@@ -154,6 +168,7 @@ EOF
 run_bootstrap() {
     BS_CODE=0
     BS_OUT=$(env -i HOME="$BS_HOME" PATH="$BS_BIN:/usr/bin:/bin" FAKE_BIN="$BS_BIN" GIT_CONFIG_NOSYSTEM=1 \
+        NOWHERE_MOTD_DIR="$BS_MOTD_DIR" NOWHERE_MOTD_CONFIG_DIR="$BS_MOTD_CONF" \
         bash "$BS_CLONE/bootstrap/bootstrap.sh" "$@" 2>&1) || BS_CODE=$?
 }
 
