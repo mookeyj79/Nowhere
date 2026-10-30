@@ -31,6 +31,9 @@ else
 fi
 unset _dump _recent
 
+# Tab opens a selectable menu (Tab/Shift+Tab cycle it; bindings in 10-line-editor.zsh).
+zstyle ':completion:*' menu select
+
 # --- Cached generated completer ------------------------------------------------------
 #  nowhere_cached_completion <tool> <cache-name> <generator args...>
 #  Runs `<tool> <args>` to (re)build the cache when absent or older than the
