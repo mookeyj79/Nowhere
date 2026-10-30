@@ -107,7 +107,7 @@ scenario_core_goto() {
 scenario_core_venv() {
     reset_session; SESSION_TOOLS="uv"; SESSION_REAL="mkdir"
     session server "$KIND_PROBE"'; for n in mkvirtualenv workon rmvirtualenv lsvirtualenv cdvirtualenv seedvenv pipinstall activate; do k $n; done
-        echo "home=$WORKON_HOME"; mkvirtualenv demo 3.12; seedvenv demo; pipinstall -e demo requests; pipinstall'
+        echo "home=$WORKON_HOME"; mkvirtualenv demo 3.12; mkdir -p $WORKON_HOME/demo/bin; seedvenv demo; pipinstall -e demo requests; pipinstall'
     assert_match "$OUT" 'home=.*/\.venvs'
     local n; for n in mkvirtualenv workon rmvirtualenv lsvirtualenv cdvirtualenv seedvenv pipinstall activate; do assert_line "$OUT" "$n=function"; done
     assert_match "$OUT" 'venv .*/\.venvs/demo --python 3.12'
