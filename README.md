@@ -2,15 +2,26 @@
 
 My personal environment for all my machines: shell profiles, scripts, and tooling config, organized by machine role.
 
+## Status
+
+Nowhere is being designed before it is built. The direction and every open decision live in the wayfinder map, [issue #1](https://github.com/mookeyj79/Nowhere/issues/1). Only the Windows DevBox profile exists so far; the other three roles are not started.
+
+The four roles are Windows DevBox, Windows Server, Linux DevBox and Linux Server. A **core** layer is shared by all four, and a **dev layer** is added only on DevBoxes. Terms are defined in [`GLOSSARY.md`](GLOSSARY.md).
+
 ## Layout
 
-| Directory | Status |
+| Path | Contents |
 | --- | --- |
-| `Windows DevBox/` | In use |
-| `Linux DevBox/` | Placeholder |
-| `Linux Server/` | Placeholder |
-| `Windows Server/` | Placeholder |
+| `Windows DevBox/` | The existing PowerShell profile. It moves under `powershell/` once the planned layout is built |
 | `docs/` | Agent and workflow docs (issue tracker, triage labels, domain) |
+| `scripts/` | Wayfinder helpers: `frontier.sh`, `map-append.sh`, `resolve.sh` |
+| `.githooks/`, `.github/` | gitleaks pre-commit hook and CI (gitleaks, shellcheck) |
+
+Decided but not built yet: files organised by shell (`shared/`, `powershell/`, `zsh/`, each split into core and dev), a per-OS bootstrap script with a pinned tool manifest, and an untracked per-machine local override in `~/.config/nowhere/` for paths, tokens and similar values.
+
+## Contributing
+
+Enable the secrets hook once per clone: `git config core.hooksPath .githooks`. It needs [gitleaks](https://github.com/gitleaks/gitleaks) installed, and blocks commits that stage secrets.
 
 ## Windows DevBox
 
@@ -31,7 +42,7 @@ Other contents:
 - `bin/Update-System.ps1`: one-shot updater for Windows Update, winget, WSL, and disk cleanup. Run it as administrator. Use `-Windows`, `-Winget`, `-WSL`, or `-DiskCleanup` to run a single step.
 - `starship.toml`: Catppuccin-themed Starship prompt.
 - `powershell.config.json`: sets the execution policy to `RemoteSigned`.
-- `Modules/`: vendored PowerShell modules (Catppuccin, PSWindowsUpdate, QRCodeGenerator, powershell-yaml).
+- `Modules/`: vendored PowerShell modules (Catppuccin, PSWindowsUpdate, QRCodeGenerator, powershell-yaml). Git-ignored and not in the repo; bootstrap will install them from a pinned manifest.
 
 ### Setup
 
