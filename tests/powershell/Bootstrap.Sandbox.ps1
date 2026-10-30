@@ -5,20 +5,37 @@
 $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
 $script:Sandboxes = @()
+
+# Fake uv: records every call, remembers `uv tool install name==ver` in uvtools.txt
+# and lists it back as "name vver" like the real `uv tool list`.
+$script:FakeUv = @'
+$dir = $PSScriptRoot
+Add-Content (Join-Path $dir 'uv.log') ($args -join ' ')
+$state = Join-Path $dir 'uvtools.txt'
+if ($args[0] -eq 'tool' -and $args[1] -eq 'install') {
+    $n, $v = $args[2] -split '=='
+    Add-Content $state "$n v$v"
+}
+elseif ($args[0] -eq 'tool' -and $args[1] -eq 'list') {
+    if (Test-Path $state) { Get-Content $state }
+}
+exit 0
+'@
+
 function Remove-BootstrapSandboxes {
     foreach ($r in $script:Sandboxes) { Remove-Item $r -Recurse -Force -ErrorAction SilentlyContinue }
     $script:Sandboxes = @()
 }
 
 function New-BootstrapSandbox {
-    param([switch]$WithUv)
+    param([switch]$WithUv, [switch]$NoWinget)
     $root = Join-Path ([IO.Path]::GetTempPath()) ('nowhere-bs-' + [guid]::NewGuid().ToString('N'))
     $bin  = Join-Path $root 'fakebin'
     $clone = Join-Path $root 'clone'
     New-Item -ItemType Directory -Path $bin, (Join-Path $root 'home'), (Join-Path $root 'modules'), $clone -Force | Out-Null
 
     # Fake winget: records every call, remembers installs in installed.txt.
-    Set-Content (Join-Path $bin 'winget.ps1') @'
+    if (-not $NoWinget) { Set-Content (Join-Path $bin 'winget.ps1') @'
 $dir = $PSScriptRoot
 Add-Content (Join-Path $dir 'winget.log') ($args -join ' ')
 $i = [array]::IndexOf($args, '--id')
@@ -29,11 +46,11 @@ switch ($args[0]) {
     'install' { Add-Content $state $id; exit 0 }
     default   { exit 0 }
 }
-'@
-    if ($WithUv) { Set-Content (Join-Path $bin 'uv.ps1') '' }
+'@ }
+    if ($WithUv) { Set-Content (Join-Path $bin 'uv.ps1') $script:FakeUv }
 
     # A minimal clone: the real bootstrap, manifests and example, in a fresh git repo.
-    foreach ($p in 'bootstrap', 'shared/tools.json', 'powershell/local.ps1.example', 'powershell/modules.json', '.githooks') {
+    foreach ($p in 'bootstrap', 'shared/tools.json', 'shared/server-motd', 'powershell/local.ps1.example', 'powershell/modules.json', '.githooks') {
         $src = Join-Path $script:RepoRoot $p
         if (Test-Path $src) {
             $dst = Join-Path $clone $p
@@ -47,7 +64,7 @@ switch ($args[0]) {
     git -C $clone init -q 2>&1 | Out-Null
     $script:Sandboxes += $root
     [pscustomobject]@{ Root = $root; Bin = $bin; Clone = $clone; Home = (Join-Path $root 'home')
-                       Profile = (Join-Path $root 'home/profile.ps1'); Config = (Join-Path $root 'home/.config/nowhere') }
+                       Profile = (Join-Path $root 'home/profile.ps1'); MotdConfig = (Join-Path $root 'programdata/server-motd'); Config = (Join-Path $root 'home/.config/nowhere') }
 }
 
 function Invoke-Bootstrap {
@@ -67,13 +84,14 @@ function Install-Module {
 function Invoke-RestMethod {
     param($Uri)
     Add-Content (Join-Path $env:FAKE_BIN 'irm.log') "$Uri"
-    'Set-Content (Join-Path $env:FAKE_BIN "uv.ps1") ""'
+    Set-Content (Join-Path $env:FAKE_BIN 'uv.ps1') $env:FAKE_UV_BODY
+    '$null'
 }
 '@
     $script = Join-Path $Sandbox.Clone 'bootstrap/bootstrap.ps1'
-    $cmd = "$fakes`n& '$script' '$Role' -RepoRoot '$($Sandbox.Clone)' -ProfilePath '$($Sandbox.Profile)' -ConfigDir '$($Sandbox.Config)'"
+    $cmd = "$fakes`n& '$script' '$Role' -RepoRoot '$($Sandbox.Clone)' -ProfilePath '$($Sandbox.Profile)' -ConfigDir '$($Sandbox.Config)' -MotdConfigDir '$($Sandbox.MotdConfig)'"
     $vars = @{ PATH = $path; HOME = $Sandbox.Home; USERPROFILE = $Sandbox.Home; FAKE_BIN = $Sandbox.Bin
-               FAKE_MODULES = $modDir; PSModulePath = $modDir }
+               FAKE_MODULES = $modDir; FAKE_UV_BODY = $script:FakeUv; PSModulePath = $modDir }
     $saved = @{}
     foreach ($k in $vars.Keys) { $saved[$k] = [Environment]::GetEnvironmentVariable($k); [Environment]::SetEnvironmentVariable($k, $vars[$k]) }
     try {

@@ -1,0 +1,13 @@
+# config.toml.example for server-motd
+#
+# Bootstrap (both Servers) copies this to server-motd's own config location if
+# no config.toml exists there, owner-only, and never overwrites an existing one:
+#   Windows: %ProgramData%\server-motd\config.toml
+#   Linux:   /etc/server-motd/config.toml
+#
+# Placeholder: server-motd's config schema is owned upstream. Replace the body
+# with the upstream example once the pinned release (shared/tools.json, uvTools)
+# documents its keys. May hold API keys and passwords; keep it owner-only.
+
+# [motd]
+# banner_title = "Server1"
