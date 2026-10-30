@@ -7,8 +7,8 @@
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding           = [System.Text.Encoding]::UTF8
 
-# Default editor
-$env:EDITOR = 'code'
+# Editor: nano by default (dev layer switches to 'code --wait'); local.ps1 can set $NowhereEditor
+$env:EDITOR = if ($NowhereEditor) { $NowhereEditor } else { 'nano' }
 $env:VISUAL = $env:EDITOR
 
 # Pager
@@ -20,9 +20,13 @@ $env:LESS  = '-R -F -X'   # -R color passthrough, -F quit if one screen, -X no i
 $env:WORKON_HOME = Join-Path $HOME '.venvs'
 
 # Local bin — scripts that live alongside the profile, available everywhere
-$_binDir = Join-Path (Split-Path $PROFILE -Parent) 'bin'
-if (Test-Path $_binDir) { $env:PATH = "$_binDir;$env:PATH" }
-Remove-Variable _binDir
+# (core/bin and dev/bin are added to PATH by profile.ps1)
+
+# Cache for generated init scripts and completions
+$global:NowhereCacheDir =
+    if ($env:LOCALAPPDATA)     { Join-Path $env:LOCALAPPDATA 'pwsh-completion-cache' }
+    elseif ($env:XDG_CACHE_HOME) { Join-Path $env:XDG_CACHE_HOME 'pwsh-completion-cache' }
+    else                       { Join-Path $HOME '.cache/pwsh-completion-cache' }
 
 # Multi-context kubeconfig — merges every config / *.yaml / *.yml in ~/.kube
 $kubeDir = Join-Path $HOME '.kube'
@@ -35,5 +39,4 @@ if (Test-Path $kubeDir) {
     }
 }
 
-# ConfCrypt
-$env:CONFCRYPT_HOME = "D:\Dev\Homelab\Scripts\confcrypt"
+# ConfCrypt: machine-specific, set $env:CONFCRYPT_HOME in local.ps1 (no default)

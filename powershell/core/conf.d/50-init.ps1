@@ -7,7 +7,7 @@
 #  each costs one stat() call at startup instead of spawning a subprocess.
 # =============================================================================
 
-$_cacheDir = Join-Path $env:LOCALAPPDATA 'pwsh-completion-cache'
+$_cacheDir = $global:NowhereCacheDir
 $null      = [System.IO.Directory]::CreateDirectory($_cacheDir)
 
 # --- zoxide (frecency-based smart cd) ---------------------------------------
@@ -31,11 +31,10 @@ if ($_zoxide) {
 }
 
 # --- Starship (must be last — overwrites the prompt function) ---------------
-#  Config: drop starship.toml next to $PROFILE and it will be picked up
-#  automatically, so your Linux config stays in sync with a symlink.
+#  Config: the single shared shared/starship.toml in the clone.
 $_starship = Get-Command starship -ErrorAction SilentlyContinue
 if ($_starship) {
-    $starshipConfig = Join-Path (Split-Path $PROFILE -Parent) 'starship.toml'
+    $starshipConfig = Join-Path $global:NowhereRepoDir 'shared/starship.toml'
     if (Test-Path $starshipConfig) { $env:STARSHIP_CONFIG = $starshipConfig }
 
     $cacheFile  = Join-Path $_cacheDir 'starship-init.ps1'
