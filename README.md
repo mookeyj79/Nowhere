@@ -12,7 +12,8 @@ The four roles are Windows DevBox, Windows Server, Linux DevBox and Linux Server
 
 | Path | Contents |
 | --- | --- |
-| `Windows DevBox/` | The existing PowerShell profile. It moves under `powershell/` once the planned layout is built |
+| `powershell/`, `shared/` | PowerShell profile (core and dev layers) and the shared Starship config |
+| `tests/` | Pester tests (sandboxed `pwsh` session) |
 | `docs/` | Agent and workflow docs (issue tracker, triage labels, domain) |
 | `scripts/` | Wayfinder helpers: `frontier.sh`, `map-append.sh`, `resolve.sh` |
 | `.githooks/`, `.github/` | gitleaks pre-commit hook and CI (gitleaks, shellcheck) |
@@ -23,29 +24,30 @@ Decided but not built yet: files organised by shell (`shared/`, `powershell/`, `
 
 Enable the secrets hook once per clone: `git config core.hooksPath .githooks`. It needs [gitleaks](https://github.com/gitleaks/gitleaks) installed, and blocks commits that stage secrets.
 
-## Windows DevBox
+## PowerShell profile
 
-A modular PowerShell 7 profile. `profile.ps1` is the `$PROFILE` entry point. It dot-sources every `conf.d/*.ps1` file, then every `profile.d/*.ps1` file, each in name order, so you can enable or disable a feature by adding or removing a file.
+A modular PowerShell 7 profile under `powershell/`. A few-line stub at `$PROFILE` sets `$env:NOWHERE_ROLE` (`devbox` or `server`) and dot-sources `powershell/profile.ps1`. That entry point dot-sources the local override `~/.config/nowhere/local.ps1` first, then `core/conf.d/*.ps1` plus, on `devbox` only, `dev/conf.d/*.ps1`, merged in one filename order. Any other role (or none) gets core only.
 
 | File | Purpose |
 | --- | --- |
-| `conf.d/00-environment.ps1` | UTF-8 encoding, `EDITOR`/`PAGER`, `WORKON_HOME`, `bin/` on `PATH`, merged `KUBECONFIG` |
-| `conf.d/10-psreadline.ps1` | PSReadLine: history prediction, Emacs mode, key bindings |
-| `conf.d/20-completions.ps1` | Tab completion via Carapace and native tool completers, cached by binary mtime |
-| `conf.d/30-aliases.ps1` | Wrappers for eza, git, kubectl, docker, helm, and terraform/tofu |
-| `conf.d/40-functions.ps1` | Profile management (`reload`, `editp`), `goto` bookmarks, uv virtualenv helpers |
-| `conf.d/50-init.ps1` | zoxide and Starship init. Must load last because Starship overwrites the prompt |
+| `core/conf.d/00-environment.ps1` | UTF-8 encoding, `EDITOR`/`PAGER`, `WORKON_HOME`, merged `KUBECONFIG` |
+| `core/conf.d/10-line-editor.ps1` | PSReadLine: history prediction, Emacs mode, key bindings |
+| `core/conf.d/20-completions.ps1` | Tab completion via Carapace and native tool completers, cached by binary mtime |
+| `core/conf.d/30-aliases.ps1` | One-liners: eza, git, navigation |
+| `core/conf.d/35-helpers.ps1` | Functions with logic: `gcl`, `touch`, `mkcd`, `wget`, `List-COM` (Windows only) |
+| `core/conf.d/40-profile.ps1` | `reload`, `editp`, `update`, `aliases` |
+| `core/conf.d/41-goto.ps1`, `42-venv.ps1` | `goto` bookmarks, uv virtualenv helpers |
+| `core/conf.d/50-init.ps1` | zoxide and Starship init. Must load last because Starship overwrites the prompt |
+| `dev/conf.d/01-dev-environment.ps1` | `EDITOR` = `code --wait` |
+| `dev/conf.d/31-dev-aliases.ps1` | kubectl, helm, docker, terraform/tofu wrappers (OpenTofu plan is `topl`) |
+| `dev/conf.d/43-ansible-wsl.ps1` | Runs `ansible*` commands inside WSL and translates Windows paths |
 
 Other contents:
 
-- `profile.d/100-ansible-wsl.ps1`: runs `ansible*` commands inside WSL (Debian, pyenv `dev` env) and translates Windows paths to `/mnt/<drive>/...`. Override the defaults by setting `$script:AnsibleWslDistro` and `$script:AnsiblePyenvEnv` before it loads.
-- `bin/Update-System.ps1`: one-shot updater for Windows Update, winget, WSL, and disk cleanup. Run it as administrator. Use `-Windows`, `-Winget`, `-WSL`, or `-DiskCleanup` to run a single step.
-- `starship.toml`: Catppuccin-themed Starship prompt.
-- `powershell.config.json`: sets the execution policy to `RemoteSigned`.
-- `Modules/`: vendored PowerShell modules (Catppuccin, PSWindowsUpdate, QRCodeGenerator, powershell-yaml). Git-ignored and not in the repo; bootstrap will install them from a pinned manifest.
-
-### Setup
-
-Copy or symlink the contents of `Windows DevBox/` into the directory that holds your `$PROFILE`. Run `Split-Path $PROFILE -Parent` in pwsh to find it. Rename `profile.ps1` to match `$PROFILE`, usually `Microsoft.PowerShell_profile.ps1`.
-
+- `powershell/local.ps1.example`: template for the per-machine override. Every key is optional and read with a default.
+- `powershell/core/bin/Update-System.ps1`: one-shot updater for Windows Update, winget, WSL, and disk cleanup (`update`). Run it as administrator.
+- `shared/starship.toml`: the single Catppuccin Starship prompt.
+- `powershell/powershell.config.json`: sets the execution policy to `RemoteSigned`.
+- `Modules/`: vendored PowerShell modules. Git-ignored; bootstrap will install them from a pinned manifest.
+- `tests/powershell/`: Pester tests that run a real `pwsh` against a throwaway HOME. Run `Invoke-Pester tests/powershell` (Pester 5+).
 Optional tools the profile uses when they are installed: eza, zoxide, Starship, Carapace, kubectl, helm, docker, gh, terraform/tofu, uv.

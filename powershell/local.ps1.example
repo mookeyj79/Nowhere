@@ -1,0 +1,27 @@
+# =============================================================================
+#  local.ps1.example
+#  Copy to ~/.config/nowhere/local.ps1 (bootstrap does this, never overwriting).
+#  Dot-sourced before any conf.d file. Every key is optional: the tracked
+#  profile reads each one with a default. May hold tokens; keep it owner-only.
+# =============================================================================
+
+# Where the clone lives (default: the clone this profile is loaded from)
+# $env:NOWHERE_HOME = 'D:\Dev\Nowhere'
+
+# ConfCrypt checkout (no default; unset means ConfCrypt is not wired up)
+# $env:CONFCRYPT_HOME = 'D:\Dev\Homelab\Scripts\confcrypt'
+
+# Editor override (default: nano on servers, 'code --wait' on devboxes)
+# $NowhereEditor = 'code --wait'
+
+# Ansible-via-WSL (devbox only; defaults: debian / dev)
+# $NowhereAnsibleWslDistro = 'debian'
+# $NowhereAnsiblePyenvEnv  = 'dev'
+
+# Extra or overriding `goto` bookmarks
+# $NowhereGotoBookmarks = @{
+#     lab = 'D:\Dev\Homelab'
+# }
+
+# Tokens (plaintext; this file must stay owner-only)
+# $env:GITHUB_TOKEN = ''

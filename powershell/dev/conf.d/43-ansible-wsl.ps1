@@ -1,11 +1,13 @@
 # =============================================================================
-#  100-ansible-wsl.ps1
+#  43-ansible-wsl.ps1  (dev layer: devbox only)
 #  Routes ansible commands through WSL, activating a pyenv virtualenv first
 #  and translating Windows paths to /mnt/<drive>/... automatically.
 # =============================================================================
 
-if (-not $script:AnsibleWslDistro) { $script:AnsibleWslDistro = 'debian' }
-if (-not $script:AnsiblePyenvEnv)  { $script:AnsiblePyenvEnv  = 'dev'    }
+#  Override the distro / pyenv env with $NowhereAnsibleWslDistro and
+#  $NowhereAnsiblePyenvEnv in local.ps1.
+$script:AnsibleWslDistro = if ($NowhereAnsibleWslDistro) { $NowhereAnsibleWslDistro } else { 'debian' }
+$script:AnsiblePyenvEnv  = if ($NowhereAnsiblePyenvEnv)  { $NowhereAnsiblePyenvEnv }  else { 'dev' }
 
 # --- Path translation -------------------------------------------------------
 

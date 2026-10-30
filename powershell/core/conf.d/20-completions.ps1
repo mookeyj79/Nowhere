@@ -8,11 +8,11 @@
 #  3. Live callbacks — winget and aws run in-process on Tab, not at startup
 #
 #  On a warm cache each cached tool costs one stat() call at startup.
-#  Cache lives in %LOCALAPPDATA%\pwsh-completion-cache\ and auto-invalidates
+#  Cache lives in $NowhereCacheDir (%LOCALAPPDATA%\pwsh-completion-cache\ on Windows) and auto-invalidates
 #  when a binary is updated.
 # =============================================================================
 
-$script:CompletionCacheDir = Join-Path $env:LOCALAPPDATA 'pwsh-completion-cache'
+$script:CompletionCacheDir = $global:NowhereCacheDir
 $null = [System.IO.Directory]::CreateDirectory($script:CompletionCacheDir)
 
 # --- Generic cached completer helper ----------------------------------------
