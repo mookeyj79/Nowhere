@@ -40,7 +40,7 @@ count_matching() { printf '%s\n' "$1" | grep -c -- "$2" || true; }
 # Inputs (globals, reset by reset_session): SESSION_LOCAL (override text, unset =
 # no file), SESSION_TOOLS (shim names; unset = a PATH with no tools at all).
 # Outputs: OUT (stdout), ERR (stderr), CODE.
-reset_session() { unset SESSION_LOCAL SESSION_TOOLS SESSION_PLUGINS; }
+reset_session() { unset SESSION_LOCAL SESSION_TOOLS SESSION_PLUGINS SESSION_REAL; }
 
 session() {
     local role=$1 probe=${2:-:}
@@ -52,6 +52,9 @@ session() {
     for t in ${SESSION_TOOLS:-}; do
         printf '#!/bin/sh\necho %s "$@"\n' "$t" > "$bin/$t"
         chmod +x "$bin/$t"
+    done
+    for t in ${SESSION_REAL:-}; do   # real binaries (mkdir, cat...) linked into the bin
+        ln -s "$(command -v "$t")" "$bin/$t"
     done
     if [ "${SESSION_PLUGINS+set}" = set ]; then
         local spec name file body
