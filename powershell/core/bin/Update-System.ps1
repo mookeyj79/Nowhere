@@ -3,10 +3,11 @@ param(
     [switch]$Windows,
     [switch]$Winget,
     [switch]$WSL,
-    [switch]$DiskCleanup
+    [switch]$DiskCleanup,
+    [switch]$Tools
 )
 
-$All = -not ($Windows -or $Winget -or $WSL -or $DiskCleanup)
+$All = -not ($Windows -or $Winget -or $WSL -or $DiskCleanup -or $Tools)
 
 # On a server (role set by the Nowhere profile) a bare `update` means Windows
 # Update plus winget when it exists. WSL is not a server feature and cleanmgr
@@ -14,6 +15,7 @@ $All = -not ($Windows -or $Winget -or $WSL -or $DiskCleanup)
 if ($All -and $global:NowhereRole -eq 'server') {
     $All = $false
     $Windows = $true
+    $Tools = $true
     $Winget = [bool](Get-Command winget -ErrorAction SilentlyContinue)
 }
 
@@ -136,6 +138,17 @@ if ($Winget -or $All) {
     else {
         Write-Warning "msstore source unavailable - open Microsoft Store once, then re-run"
     }
+    Write-Host -NoNewline "`n"
+}
+
+if ($Tools -or $All) {
+    Write-Host -ForegroundColor Green -NoNewline "[*]"
+    Write-Host " Updating uv and pinned modules..."
+    if (Get-Command Update-Uv -ErrorAction SilentlyContinue) {
+        Update-Uv
+        Update-PinnedModules
+    }
+    else { Write-Warning "Update-Uv not loaded (run from a Nowhere profile session)" }
     Write-Host -NoNewline "`n"
 }
 
