@@ -7,6 +7,10 @@ here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$here/lib.sh"
 # shellcheck source=tests/zsh/scenarios.sh
 . "$here/scenarios.sh"
+for f in "$here"/scenarios-*.sh; do
+    # shellcheck disable=SC1090
+    [ -e "$f" ] && . "$f"
+done
 trap cleanup_sandboxes EXIT
 
 [ -n "$ZSH_BIN" ] || { echo "zsh not found on PATH" >&2; exit 2; }

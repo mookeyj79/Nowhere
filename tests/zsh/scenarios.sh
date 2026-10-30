@@ -74,7 +74,7 @@ scenario_missing_tools_hint() {
 }
 scenario_no_hint_when_complete() {
     reset_session; SESSION_TOOLS="starship zoxide carapace fzf eza git"
-    SESSION_PLUGINS="catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:A zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:B"
+    SESSION_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:C zsh-history-substring-search:zsh-history-substring-search.zsh:D catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:A zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:B"
     session server 'echo ok'
     assert_eq "$(count_matching "$OUT" bootstrap)" 0 'hint count'
 }
@@ -88,10 +88,10 @@ scenario_plugin_skip() {
 }
 scenario_plugin_load() {
     reset_session; SESSION_TOOLS="starship zoxide carapace fzf eza git"
-    SESSION_PLUGINS="catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:THEME_LOADED zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:SYNTAX_LOADED"
+    SESSION_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:AS_LOADED zsh-history-substring-search:zsh-history-substring-search.zsh:HS_LOADED catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:THEME_LOADED zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:SYNTAX_LOADED"
     session server 'echo "theme=$THEME_LOADED syntax=$SYNTAX_LOADED order=$ORDER"'
     assert_empty "$ERR"
-    assert_line "$OUT" 'theme=1 syntax=1 order=catppuccin-zsh-syntax-highlighting,zsh-syntax-highlighting,'
+    assert_line "$OUT" 'theme=1 syntax=1 order=zsh-autosuggestions,zsh-history-substring-search,catppuccin-zsh-syntax-highlighting,zsh-syntax-highlighting,'
     assert_eq "$(count_matching "$OUT" 'run bootstrap')" 0 'no hint when plugins present'
 }
 

@@ -30,3 +30,8 @@ boot-idempotent|both|Bootstrap.Tests: idempotence|second run changes nothing
 boot-gitleaks-release|zsh|n/a (winget carries gitleaks)|pinned gitleaks release binary installed once
 boot-gitleaks-badsum|zsh|n/a|checksum mismatch aborts and installs nothing
 boot-plugins-pinned|zsh|n/a (pinned modules instead)|plugins cloned at pinned SHAs; drift corrected
+le-bindings|zsh|10-line-editor.ps1: key bindings|emacs mode; Tab/Shift+Tab; Up/Down substring search; Ctrl+f/Alt+f; fzf Ctrl+r/t Alt+c
+le-ghost-style|zsh|10-line-editor.ps1: InlinePrediction color|ghost text is fg=#8087a2
+le-history|zsh|10-line-editor.ps1: history|10,000 entries, no duplicates
+le-plugins-missing|zsh|n/a|no plugins/fzf: silent, fallback bindings, one hint
+le-syntax-last|zsh|n/a|syntax highlighting is sourced after every other plugin
