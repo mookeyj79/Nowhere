@@ -1,0 +1,7 @@
+{
+  "$comment": "PowerShell modules installed by bootstrap.ps1 at these exact versions.",
+  "modules": [
+    { "name": "PSReadLine",      "version": "2.4.5" },
+    { "name": "PSWindowsUpdate", "version": "2.2.1.5" }
+  ]
+}

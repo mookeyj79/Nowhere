@@ -1,0 +1,29 @@
+{
+  "$comment": "Shell-neutral tool manifest read by every bootstrap (bootstrap.ps1 now; bootstrap.sh later). Each tool appears once. 'layer' is core (all roles) or dev (devbox only). 'packages' maps a package manager to its package id; a manager that is absent has no package for that tool on that manager. 'installer' names a non-package-manager install route handled by the bootstrap itself (uv: Astral's official installer, only when uv is not on PATH). Managers: winget, apt.",
+  "tools": [
+    { "name": "starship", "layer": "core", "packages": { "winget": "Starship.Starship" } },
+    { "name": "zoxide",   "layer": "core", "packages": { "winget": "ajeetdsouza.zoxide", "apt": "zoxide" } },
+    { "name": "fzf",      "layer": "core", "packages": { "winget": "junegunn.fzf", "apt": "fzf" } },
+    { "name": "eza",      "layer": "core", "packages": { "winget": "eza-community.eza", "apt": "eza" } },
+    { "name": "bat",      "layer": "core", "packages": { "winget": "sharkdp.bat", "apt": "bat" } },
+    { "name": "carapace", "layer": "core", "packages": { "winget": "rsteube.Carapace" } },
+    { "name": "uv",       "layer": "core", "installer": "astral", "packages": {} },
+    { "name": "git",      "layer": "core", "packages": { "winget": "Git.Git", "apt": "git" } },
+    { "name": "less",     "layer": "core", "packages": { "winget": "jftuga.less", "apt": "less" } },
+    { "name": "ripgrep",  "layer": "core", "packages": { "winget": "BurntSushi.ripgrep.MSVC", "apt": "ripgrep" } },
+    { "name": "fd",       "layer": "core", "packages": { "winget": "sharkdp.fd", "apt": "fd-find" } },
+    { "name": "nano",     "layer": "core", "packages": { "winget": "GNU.nano", "apt": "nano" } },
+    { "name": "nvim",     "layer": "core", "packages": { "winget": "Neovim.Neovim", "apt": "neovim" } },
+    { "name": "hexyl",    "layer": "core", "packages": { "winget": "sharkdp.hexyl", "apt": "hexyl" } },
+    { "name": "btop",     "layer": "core", "packages": { "winget": "aristocratos.btop4win", "apt": "btop" } },
+    { "name": "gitleaks", "layer": "core", "packages": { "winget": "Gitleaks.Gitleaks" } },
+
+    { "name": "kubectl",   "layer": "dev", "packages": { "winget": "Kubernetes.kubectl" } },
+    { "name": "helm",      "layer": "dev", "packages": { "winget": "Helm.Helm" } },
+    { "name": "docker",    "layer": "dev", "packages": { "winget": "Docker.DockerCLI" } },
+    { "name": "terraform", "layer": "dev", "packages": { "winget": "Hashicorp.Terraform" } },
+    { "name": "tofu",      "layer": "dev", "packages": { "winget": "OpenTofu.Tofu" } },
+    { "name": "gh",        "layer": "dev", "packages": { "winget": "GitHub.cli", "apt": "gh" } },
+    { "name": "code",      "layer": "dev", "packages": { "winget": "Microsoft.VisualStudioCode" } }
+  ]
+}
