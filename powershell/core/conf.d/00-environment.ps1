@@ -7,6 +7,16 @@
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding           = [System.Text.Encoding]::UTF8
 
+# --- Tool presence and the one-per-session bootstrap hint --------------------
+#  The profile never installs anything: a missing tool is skipped silently and
+#  50-init prints at most one "run bootstrap" hint per session.
+function Test-NowhereTool {
+    param([Parameter(Mandatory)] [string]$Name)
+    [bool](Get-Command $Name -CommandType Application -ErrorAction SilentlyContinue)
+}
+$global:NowhereCoreTools = 'starship', 'zoxide', 'carapace', 'fzf', 'eza', 'git'
+$global:NowhereHintShown = $false
+
 # Editor: nano by default (dev layer switches to 'code --wait'); local.ps1 can set $NowhereEditor
 $env:EDITOR = if ($NowhereEditor) { $NowhereEditor } else { 'nano' }
 $env:VISUAL = $env:EDITOR
