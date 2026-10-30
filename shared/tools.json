@@ -1,5 +1,5 @@
 {
-  "$comment": "Shell-neutral tool manifest read by every bootstrap (bootstrap.ps1 now; bootstrap.sh later). Each tool appears once. 'layer' is core (all roles) or dev (devbox only). 'packages' maps a package manager to its package id; a manager that is absent has no package for that tool on that manager. 'installer' names a non-package-manager install route handled by the bootstrap itself (uv: Astral's official installer, only when uv is not on PATH). Managers: winget, apt. 'release' (Linux only, handled by bootstrap.sh) pins a GitHub release binary for a tool with no apt package: version, a url template with {version} and {arch} (x64 or arm64), and a sha256 per arch that the download must match. Supported Linux: Debian 13+ and Ubuntu 24.04+ (the apt ids below, notably eza and hexyl, need those releases).",
+  "$comment": "Shell-neutral tool manifest read by every bootstrap (bootstrap.ps1 now; bootstrap.sh later). Each tool appears once. 'layer' is core (all roles) or dev (devbox only). 'packages' maps a package manager to its package id; a manager that is absent has no package for that tool on that manager. 'installer' names a non-package-manager install route handled by the bootstrap itself (uv: Astral's official installer, only when uv is not on PATH). Managers: winget, apt. 'release' (Linux only, handled by bootstrap.sh) pins a GitHub release binary for a tool with no apt package: version, a url template with {version} and {arch} (x64 or arm64), and a sha256 per arch that the download must match. Supported Linux: Debian 13+ and Ubuntu 24.04+ (the apt ids below, notably eza and hexyl, need those releases). Dev tools with no apt id (helm, terraform, tofu, code) have no Linux install route yet; the dev layer skips them when absent.",
   "tools": [
     { "name": "starship", "layer": "core", "packages": { "winget": "Starship.Starship" } },
     { "name": "zoxide",   "layer": "core", "packages": { "winget": "ajeetdsouza.zoxide", "apt": "zoxide" } },
@@ -20,9 +20,9 @@
       "release": { "version": "8.30.1", "url": "https://github.com/gitleaks/gitleaks/releases/download/v{version}/gitleaks_{version}_linux_{arch}.tar.gz", "sha256": { "x64": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb", "arm64": "e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080" } } },
     { "name": "zsh", "layer": "core", "packages": { "apt": "zsh" } },
 
-    { "name": "kubectl",   "layer": "dev", "packages": { "winget": "Kubernetes.kubectl" } },
+    { "name": "kubectl",   "layer": "dev", "packages": { "winget": "Kubernetes.kubectl", "apt": "kubernetes-client" } },
     { "name": "helm",      "layer": "dev", "packages": { "winget": "Helm.Helm" } },
-    { "name": "docker",    "layer": "dev", "packages": { "winget": "Docker.DockerCLI" } },
+    { "name": "docker",    "layer": "dev", "packages": { "winget": "Docker.DockerCLI", "apt": "docker-cli" } },
     { "name": "terraform", "layer": "dev", "packages": { "winget": "Hashicorp.Terraform" } },
     { "name": "tofu",      "layer": "dev", "packages": { "winget": "OpenTofu.Tofu" } },
     { "name": "gh",        "layer": "dev", "packages": { "winget": "GitHub.cli", "apt": "gh" } },
