@@ -2,18 +2,31 @@
 # shellcheck disable=SC2016,SC2034
 # Scenarios for the Linux Server role (list: scenarios-server.txt).
 
-motd_pin() { jq -r '.uvTools[] | select(.name == "server-motd") | .version' "$BS_CLONE/shared/tools.json"; }
+# server-motd is not on PyPI: it is pinned by 'source', a git URL at a commit.
+motd_source() { jq -r '.uvTools[] | select(.name == "server-motd") | .source' "$BS_CLONE/shared/tools.json"; }
 
 scenario_server_motd_install() {
     new_bootstrap_sandbox
     run_bootstrap server; assert_eq "$BS_CODE" 0 "bootstrap failed: $BS_OUT"
-    assert_line "$(bs_log uv.log)" "uv tool install server-motd==$(motd_pin)"
+    assert_line "$(bs_log uv.log)" "uv tool install server-motd @ $(motd_source)"
     # system-wide, not under the installing user's home (the hook runs as root)
-    assert_match "$(bs_log uv.env.log)" "tool install server-motd==.* \\[dir=$BS_UVTOOL_DIR bin=$BS_UVTOOL_BIN\\]"
+    assert_match "$(bs_log uv.env.log)" "tool install server-motd @ .* \\[dir=$BS_UVTOOL_DIR bin=$BS_UVTOOL_BIN\\]"
     assert_file "$BS_UVTOOL_BIN/server-motd"
     assert_no_file "$BS_HOME/.local/bin/server-motd"
     run_bootstrap server; assert_eq "$BS_CODE" 0 "second run failed: $BS_OUT"
     assert_eq "$(bs_log uv.log | grep -c 'tool install')" 1 'reinstalled on second run'
+}
+scenario_server_motd_repin() {
+    new_bootstrap_sandbox
+    # installed at an older commit, same version number: the pin moved, so reinstall
+    mkdir -p "$BS_UVTOOL_DIR"
+    echo 'server-motd v0.1.0 [required:  git+https://github.com/mookeyj79/Server-MOTD@0000000000000000000000000000000000000000]' > "$BS_UVTOOL_DIR/uvtools.txt"
+    run_bootstrap server; assert_eq "$BS_CODE" 0 "bootstrap failed: $BS_OUT"
+    assert_line "$(bs_log uv.log)" "uv tool install server-motd @ $(motd_source)"
+}
+scenario_server_motd_source_pinned() {
+    local src; src=$(jq -r '.uvTools[] | select(.name == "server-motd") | .source' "$REPO_ROOT/shared/tools.json")
+    assert_match "$src" '^git\+https://.+@[0-9a-f]{40}$'
 }
 scenario_server_motd_config() {
     new_bootstrap_sandbox

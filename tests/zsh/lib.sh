@@ -137,9 +137,14 @@ echo "uv $*" >> "$FAKE_BIN/uv.log"
 case "$1 $2" in
     "tool list") cat "$UV_TOOL_DIR/uvtools.txt" 2> /dev/null ;;
     "tool install")
-        n=${3%%==*}; v=${3#*==}
+        # like `uv tool list --show-version-specifiers`: "name vX [required: <pin>]"
         mkdir -p "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR"
-        echo "$n v$v" >> "$UV_TOOL_DIR/uvtools.txt"
+        case "$3" in
+            *" @ "*) n=${3%% @ *}; line="$n v0.1.0 [required:  ${3#* @ }]" ;;
+            *) n=${3%%==*}; v=${3#*==}; line="$n v$v [required: ==$v]" ;;
+        esac
+        grep -v "^$n v" "$UV_TOOL_DIR/uvtools.txt" > "$UV_TOOL_DIR/uvtools.new" 2> /dev/null
+        { cat "$UV_TOOL_DIR/uvtools.new"; echo "$line"; } > "$UV_TOOL_DIR/uvtools.txt"
         printf '#!/bin/sh\necho %s motd\n' "$n" > "$UV_TOOL_BIN_DIR/$n"; chmod +x "$UV_TOOL_BIN_DIR/$n" ;;
 esac
 EOF

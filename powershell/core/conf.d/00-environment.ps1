@@ -14,7 +14,36 @@ function Test-NowhereTool {
     param([Parameter(Mandatory)] [string]$Name)
     [bool](Get-Command $Name -CommandType Application -ErrorAction SilentlyContinue)
 }
-$global:NowhereCoreTools = 'starship', 'zoxide', 'carapace', 'fzf', 'eza', 'git'
+# Is this an interactive login, not a command session? `ssh host cmd` runs
+# `pwsh -c`, Ansible uses -NonInteractive -EncodedCommand, scripts use -File,
+# and all of them load the profile, so login banners check this first to stay
+# out of the command's output. -NoExit before -Command/-File keeps the session
+# interactive. pwsh takes any unambiguous parameter prefix (-com, -noni), so
+# names are matched by prefix. [Environment]::UserInteractive is not used: it
+# is false under the OpenSSH service, where real logins happen.
+function Test-NowhereInteractiveSession {
+    param(
+        [string[]]$CommandLine = [Environment]::GetCommandLineArgs(),
+        [bool]$OutputRedirected = [Console]::IsOutputRedirected
+    )
+    if ($OutputRedirected) { return $false }
+    $noExit = $false
+    foreach ($a in @($CommandLine | Select-Object -Skip 1)) {
+        if ($a -eq '-') { return $false }                       # command read from stdin
+        if ($a -notmatch '^(?:--?|/)([A-Za-z]+)$') { continue }
+        $n = $Matches[1].ToLowerInvariant()
+        if ($n.Length -ge 3 -and 'noexit'.StartsWith($n)) { $noExit = $true; continue }
+        if ($n.Length -ge 4 -and 'noninteractive'.StartsWith($n)) { return $false }
+        # -Command/-CommandWithArgs/-File/-EncodedCommand: the rest of the line is
+        # the command or its arguments, so stop reading switches here.
+        if ($n -in 'cwa', 'ec' -or 'commandwithargs'.StartsWith($n) -or 'file'.StartsWith($n) -or 'encodedcommand'.StartsWith($n)) {
+            return $noExit
+        }
+    }
+    $true
+}
+
+$global:NowhereCoreTools ='starship', 'zoxide', 'carapace', 'fzf', 'eza', 'git'
 $global:NowhereHintShown = $false
 
 # Editor: nano by default (dev layer switches to 'code --wait'); local.ps1 can set $NowhereEditor

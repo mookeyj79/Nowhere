@@ -59,9 +59,9 @@ conf.d numbering (same on both shells): `00` environment, `10` line editor, `20`
 
 ## Servers and the MOTD
 
-Servers show `server-motd`, installed with `uv tool install server-motd==<pin>` (pin in `shared/tools.json` under `uvTools`). `server-motd install-profile` and `uninstall-profile` are not used on Nowhere machines, so the hook has a single owner:
+Servers show `server-motd`, installed with `uv tool install "server-motd @ git+https://github.com/mookeyj79/Server-MOTD@<commit>"` (it is not on PyPI; the commit pin is in `shared/tools.json` under `uvTools`, and bootstrap reinstalls when the installed pin differs). `server-motd install-profile` and `uninstall-profile` are not used on Nowhere machines, so the hook has a single owner:
 
-- Windows Server: the PowerShell profile (`60-motd.ps1`) runs it on the `server` role. Config at `%ProgramData%\server-motd\config.toml`.
+- Windows Server: the PowerShell profile (`60-motd.ps1`) runs it on the `server` role, in interactive login sessions only: `ssh host cmd` (`pwsh -c`), Ansible (`-NonInteractive -EncodedCommand`), `-File` scripts and redirected output never get the banner in their output. Config at `%ProgramData%\server-motd\config.toml`.
 - Linux Server: bootstrap writes `/etc/update-motd.d/50-server-motd`, which runs the binary by absolute path. Config at `/etc/server-motd/config.toml`. The ZSH profile never calls it. The hook runs as root, so on Linux `server-motd` is installed system-wide with sudo (`UV_TOOL_DIR=/opt/nowhere/uv-tools`, binary in `/usr/local/bin`, both root-owned) instead of under the installing user's home, where root would be running a user-writable file. The hook also exits quietly if the binary is missing, so a broken install cannot break a login.
 
 Both configs are seeded from `shared/server-motd/config.toml.example`, mode owner-only, never overwritten. DevBoxes never show the MOTD.
@@ -75,7 +75,8 @@ The one maintenance name on every role. On Windows it runs `Update-System` (Wind
 - `tests/zsh/run.sh`: real `zsh` against a throwaway HOME with a fake apt/curl. Needs `zsh` and `jq`. Run `bash tests/zsh/run.sh [scenario-id ...]`.
 - `tests/powershell/`: Pester 5.5+ against a real `pwsh` in a throwaway HOME. Run `Invoke-Pester tests/powershell` (slow, several minutes). Pester result files (`testResults.xml`) are git-ignored; CI writes its own to the runner's temp directory.
 - `tests/scenarios.txt` lists the shared scenario ids and their pwsh counterparts. `tests/parity.txt` is the one list **both** suites read (`Parity.Tests.ps1` and `scenarios-parity.sh`): core command names, role gating, `EDITOR` defaults, and missing-tool silence must be identical in pwsh and zsh. Add a line there to extend the parity contract.
-- CI (`.github/workflows/gitleaks.yml`) runs gitleaks, shellcheck, Pester on Windows and the zsh harness on Ubuntu.
+- `tests/uvtools-smoke.sh`: installs every `uvTools` pin with the real `uv` (network) and runs its `--help`, since both sandboxes fake `uv`. Needs `uv` and `jq`.
+- CI (`.github/workflows/gitleaks.yml`) runs gitleaks, shellcheck, Pester on Windows, the zsh harness on Ubuntu, and the uvTools smoke test on both.
 
 The sandboxes cannot show that a real machine feels right; use [`docs/real-machine-checklist.md`](docs/real-machine-checklist.md) after bootstrapping each role.
 

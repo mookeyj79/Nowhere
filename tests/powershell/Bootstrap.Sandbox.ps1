@@ -6,15 +6,23 @@ $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
 $script:Sandboxes = @()
 
-# Fake uv: records every call, remembers `uv tool install name==ver` in uvtools.txt
-# and lists it back as "name vver" like the real `uv tool list`.
+# Fake uv: records every call, remembers `uv tool install name==ver` or
+# `uv tool install "name @ source"` in uvtools.txt and lists it back as
+# "name vX [required: <pin>]" like the real `uv tool list --show-version-specifiers`.
 $script:FakeUv = @'
 $dir = $PSScriptRoot
 Add-Content (Join-Path $dir 'uv.log') ($args -join ' ')
 $state = Join-Path $dir 'uvtools.txt'
 if ($args[0] -eq 'tool' -and $args[1] -eq 'install') {
-    $n, $v = $args[2] -split '=='
-    Add-Content $state "$n v$v"
+    if ($args[2] -like '* @ *') {
+        $n, $src = $args[2] -split ' @ ', 2
+        $line = "$n v0.1.0 [required:  $src]"
+    } else {
+        $n, $v = $args[2] -split '=='
+        $line = "$n v$v [required: ==$v]"
+    }
+    $kept = if (Test-Path $state) { @(Get-Content $state | Where-Object { $_ -notlike "$n v*" }) } else { @() }
+    Set-Content $state (@($kept) + $line)
 }
 elseif ($args[0] -eq 'tool' -and $args[1] -eq 'list') {
     if (Test-Path $state) { Get-Content $state }

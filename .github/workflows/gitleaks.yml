@@ -19,7 +19,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: shellcheck -x scripts/*.sh .githooks/pre-commit bootstrap/bootstrap.sh tests/zsh/*.sh
+      - run: shellcheck -x scripts/*.sh .githooks/pre-commit bootstrap/bootstrap.sh tests/zsh/*.sh tests/uvtools-smoke.sh
+  uvtools-smoke:
+    # The sandbox suites fake uv; this installs the real uvTools pins on both OSes.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v10.3.3
+      - name: Install and run every uvTools pin with the real uv
+        shell: bash
+        run: sh tests/uvtools-smoke.sh
   pester:
     runs-on: windows-latest
     steps:
