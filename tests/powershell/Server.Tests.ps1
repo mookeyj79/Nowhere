@@ -9,9 +9,9 @@ BeforeAll {
 AfterAll { Remove-BootstrapSandboxes }
 
 Describe 'server-motd manifest entry' {
-    It 'is pinned to an exact version for the server role only' {
+    It 'is pinned to a git commit (not on PyPI) for the server role only' {
         $script:Motd | Should -Not -BeNullOrEmpty
-        $script:Motd.version | Should -Match '^\d+\.\d+\.\d+$'
+        $script:Motd.source | Should -Match '^git\+https://.+@[0-9a-f]{40}$'
         $script:Motd.roles | Should -Be @('server')
     }
     It 'ships a config.toml.example' {
@@ -20,10 +20,10 @@ Describe 'server-motd manifest entry' {
 }
 
 Describe 'bootstrap server: server-motd' {
-    It 'installs server-motd via uv tool at the pinned version' {
+    It 'installs server-motd via uv tool at the pinned commit' {
         $sb = New-BootstrapSandbox -WithUv
         (Invoke-Bootstrap $sb -Role server).ExitCode | Should -Be 0
-        Read-Log $sb 'uv.log' | Should -Contain "tool install server-motd==$($script:Motd.version)"
+        Read-Log $sb 'uv.log' | Should -Contain "tool install server-motd @ $($script:Motd.source)"
     }
     It 'does not reinstall on a second run' {
         $sb = New-BootstrapSandbox -WithUv
@@ -31,17 +31,17 @@ Describe 'bootstrap server: server-motd' {
         (Invoke-Bootstrap $sb -Role server).ExitCode | Should -Be 0
         @(Read-Log $sb 'uv.log' | Where-Object { $_ -like 'tool install*' }) | Should -HaveCount 1
     }
-    It 'reinstalls when the installed version differs from the pin' {
+    It 'reinstalls when the installed pin differs (same version, older commit)' {
         $sb = New-BootstrapSandbox -WithUv
-        Set-Content (Join-Path $sb.Bin 'uvtools.txt') 'server-motd v0.0.1'
+        Set-Content (Join-Path $sb.Bin 'uvtools.txt') 'server-motd v0.1.0 [required:  git+https://github.com/mookeyj79/Server-MOTD@0000000000000000000000000000000000000000]'
         (Invoke-Bootstrap $sb -Role server).ExitCode | Should -Be 0
-        Read-Log $sb 'uv.log' | Should -Contain "tool install server-motd==$($script:Motd.version)"
+        Read-Log $sb 'uv.log' | Should -Contain "tool install server-motd @ $($script:Motd.source)"
     }
     It 'installs uv first when absent, then server-motd' {
         $sb = New-BootstrapSandbox
         (Invoke-Bootstrap $sb -Role server).ExitCode | Should -Be 0
         Read-Log $sb 'irm.log' | Should -HaveCount 1
-        Read-Log $sb 'uv.log' | Should -Contain "tool install server-motd==$($script:Motd.version)"
+        Read-Log $sb 'uv.log' | Should -Contain "tool install server-motd @ $($script:Motd.source)"
     }
     It 'skips the dev layer and dev tools' {
         $sb = New-BootstrapSandbox
@@ -91,16 +91,27 @@ Describe 'bootstrap server: no winget' {
         $r.ExitCode | Should -Be 0
         ($r.Output -join "`n") | Should -Match 'winget not found'
         Test-Path $sb.Profile | Should -BeTrue
-        Read-Log $sb 'uv.log' | Should -Contain "tool install server-motd==$($script:Motd.version)"
+        Read-Log $sb 'uv.log' | Should -Contain "tool install server-motd @ $($script:Motd.source)"
         Test-Path (Join-Path $sb.MotdConfig 'config.toml') | Should -BeTrue
     }
 }
 
 Describe 'profile: server-motd at login' {
-    It 'server with server-motd on PATH runs it' {
-        $r = Invoke-NowhereSession -Role server -Tools 'server-motd'
+    BeforeAll {
+        # The sandbox itself is a `pwsh -NonInteractive -Command` session, so to see
+        # the interactive path, stub the session check and re-run the MOTD file.
+        $motd = Join-Path $script:RepoRoot 'powershell/core/conf.d/60-motd.ps1'
+        $script:AsInteractive = "function Test-NowhereInteractiveSession { `$true }; . '$motd'"
+    }
+    It 'server with server-motd on PATH runs it in an interactive session' {
+        $r = Invoke-NowhereSession -Role server -Tools 'server-motd' -Probe $script:AsInteractive
         $r.Errors | Should -BeNullOrEmpty
         ($r.Output -join "`n") | Should -Match 'server-motd'
+    }
+    It 'server does not run it in a command session (ssh host cmd, Ansible, scripts)' {
+        $r = Invoke-NowhereSession -Role server -Tools 'server-motd'
+        $r.Errors | Should -BeNullOrEmpty
+        ($r.Output -join "`n") | Should -Not -Match 'server-motd'
     }
     It 'server without server-motd prints nothing about it and has no errors' {
         $r = Invoke-NowhereSession -Role server -Tools @()
@@ -108,8 +119,53 @@ Describe 'profile: server-motd at login' {
         ($r.Output -join "`n") | Should -Not -Match 'server-motd'
     }
     It 'devbox never runs it, even when installed' {
-        $r = Invoke-NowhereSession -Role devbox -Tools 'server-motd'
+        $r = Invoke-NowhereSession -Role devbox -Tools 'server-motd' -Probe $script:AsInteractive
         ($r.Output -join "`n") | Should -Not -Match 'server-motd'
+    }
+}
+
+BeforeDiscovery {
+    # pwsh command lines (split on spaces) and whether the session is interactive.
+    $script:SessionCases = @(
+        @{ Line = 'pwsh';                                      Expect = $true  }
+        @{ Line = 'pwsh -l';                                   Expect = $true  }
+        @{ Line = 'pwsh -NoLogo';                              Expect = $true  }
+        @{ Line = 'pwsh -NoExit -Command Set-Location x';      Expect = $true  }
+        @{ Line = 'pwsh -c hostname';                          Expect = $false }
+        @{ Line = 'pwsh -Command Get-Date';                    Expect = $false }
+        @{ Line = 'pwsh -com Get-Date';                        Expect = $false }
+        @{ Line = 'pwsh -CommandWithArgs x';                   Expect = $false }
+        @{ Line = 'pwsh -cwa x';                               Expect = $false }
+        @{ Line = 'pwsh -File s.ps1';                          Expect = $false }
+        @{ Line = 'pwsh -f s.ps1 -NoExit';                     Expect = $false }
+        @{ Line = 'pwsh -NonInteractive -EncodedCommand AA=='; Expect = $false }
+        @{ Line = 'pwsh -ec AA==';                             Expect = $false }
+        @{ Line = 'pwsh -noni';                                Expect = $false }
+        @{ Line = 'pwsh --command x';                          Expect = $false }
+        @{ Line = 'pwsh /Command x';                           Expect = $false }
+        @{ Line = 'pwsh -';                                    Expect = $false }
+    )
+}
+
+# Discovery-time data reaches BeforeAll only through -ForEach.
+Describe 'Test-NowhereInteractiveSession' -ForEach @(@{ Cases = $script:SessionCases }) {
+    BeforeAll {
+        # One sandbox session classifies every case (a session per case is slow).
+        $calls = foreach ($c in $Cases) {
+            $argv = ($c.Line -split ' ' | ForEach-Object { "'$_'" }) -join ','
+            "'$($c.Line)|' + (Test-NowhereInteractiveSession -CommandLine @($argv) -OutputRedirected `$false)"
+        }
+        $calls += "'redirected|' + (Test-NowhereInteractiveSession -CommandLine @('pwsh') -OutputRedirected `$true)"
+        $r = Invoke-NowhereSession -Role server -Tools @() -Probe ($calls -join '; ')
+        $script:Results = @{}
+        foreach ($l in $r.Output) { if ($l -match '^(.+)\|(True|False)$') { $script:Results[$Matches[1]] = $Matches[2] -eq 'True' } }
+    }
+    It 'classifies "<Line>" as interactive: <Expect>' -ForEach $script:SessionCases {
+        $script:Results.ContainsKey($Line) | Should -BeTrue -Because 'the probe reports every case'
+        $script:Results[$Line] | Should -Be $Expect
+    }
+    It 'treats redirected output as non-interactive' {
+        $script:Results['redirected'] | Should -BeFalse
     }
 }
 
