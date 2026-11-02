@@ -4,27 +4,21 @@
 # Completion tools are faked: each shim logs its argv to gen.log and prints a tiny
 # completion script that marks itself loaded (and appends to ORDER).
 
-# csession <probe> [sandbox-dir]  -- shims from CS_TOOLS; reuse a sandbox to test the cache.
-# Sets CS_SB OUT ERR CODE.
+# A completion-generator shim (SESSION_SHIM): logs its argv to gen.log and
+# prints a completion script that marks itself loaded.
+cs_shim() {
+    local path=$1 t=$2 log=$3/gen.log
+    case $t in
+        aws | aws_completer) printf '#!/bin/sh\n:\n' > "$path" ;;
+        carapace) printf '#!/bin/sh\necho "carapace $*" >> "%s"\necho "ORDER=\\"\\${ORDER}carapace,\\""\n' "$log" > "$path" ;;
+        *) printf '#!/bin/sh\necho "%s $*" >> "%s"\necho "LOADED_%s=1; ORDER=\\"\\${ORDER}%s,\\""\n' "$t" "$log" "$t" "$t" > "$path" ;;
+    esac
+}
+# csession <probe> [sandbox to reuse]: a server session with CS_TOOLS as
+# completion shims; reusing a sandbox keeps its cache. Sets CS_SB OUT ERR CODE.
 csession() {
-    local probe=$1 t
-    CS_SB=${2:-$(new_dir)}
-    local home=$CS_SB/home bin=$CS_SB/bin log=$CS_SB/gen.log
-    mkdir -p "$home" "$bin" "$CS_SB/xdg"
-    for t in ${CS_TOOLS:-}; do
-        [ -e "$bin/$t" ] && continue
-        case $t in
-            aws | aws_completer) printf '#!/bin/sh\n:\n' > "$bin/$t" ;;
-            carapace) printf '#!/bin/sh\necho "carapace $*" >> "%s"\necho "ORDER=\\"\\${ORDER}carapace,\\""\n' "$log" > "$bin/$t" ;;
-            *) printf '#!/bin/sh\necho "%s $*" >> "%s"\necho "LOADED_%s=1; ORDER=\\"\\${ORDER}%s,\\""\n' "$t" "$log" "$t" "$t" > "$bin/$t" ;;
-        esac
-        chmod +x "$bin/$t"
-    done
-    { echo "export NOWHERE_ROLE=server"; echo "$ZSH_SANDBOX_PRELUDE"; echo "source '$REPO_ROOT/zsh/profile.zsh'"; } > "$home/stub.zsh"
-    CODE=0
-    OUT=$(env -i HOME="$home" PATH="$bin" XDG_CACHE_HOME="$CS_SB/xdg" ORDER= \
-        "$ZSH_BIN" -f -c "source '$home/stub.zsh'; $probe" 2> "$CS_SB/err") || CODE=$?
-    ERR=$(cat "$CS_SB/err")
+    reset_session; SESSION_TOOLS=${CS_TOOLS:-}; SESSION_SHIM=cs_shim; SESSION_REUSE=${2:-}
+    session server "$1"; CS_SB=$SESSION_SB
 }
 cs_gen_log() { cat "$CS_SB/gen.log" 2> /dev/null || true; }
 cs_gen_count() { cs_gen_log | wc -l | tr -d ' '; }

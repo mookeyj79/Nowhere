@@ -4,7 +4,7 @@
 # (ticket #15). Sourced by run.sh; ids and pwsh counterparts live in tests/scenarios.txt.
 
 LE_ALL_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:AS_LOADED zsh-history-substring-search:zsh-history-substring-search.zsh:HS_LOADED catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:THEME_LOADED zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:SYNTAX_LOADED"
-LE_ALL_TOOLS="starship zoxide carapace fzf eza git"
+LE_ALL_TOOLS=$CORE_TOOLS
 LE_FZF_INIT='bindkey "^R" fzf-history-widget; bindkey "^T" fzf-file-widget; bindkey "^[c" fzf-cd-widget'
 LE_KEYS='for k in "^I" "^[[Z" "^[[A" "^[OA" "^[[B" "^[OB" "^F" "^[f" "^R" "^T" "^[c"; do bindkey "$k"; done'
 

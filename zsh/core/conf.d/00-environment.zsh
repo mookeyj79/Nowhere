@@ -9,7 +9,9 @@
 
 # --- Tool presence --------------------------------------------------------------
 nowhere_tool() { (( $+commands[$1] )) }
-typeset -ga NowhereCoreTools=(starship zoxide carapace fzf eza git)
+# The tools whose absence triggers the hint: shared/core-tools.txt, one per
+# line, comments dropped. $(<file) reads it without forking.
+typeset -ga NowhereCoreTools=(${${(f)"$(<$NowhereRepoDir/shared/core-tools.txt)"}:#\#*})
 typeset -ga NowhereMissing=()
 
 # --- Plugin directory convention --------------------------------------------------

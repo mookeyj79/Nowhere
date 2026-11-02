@@ -4,14 +4,14 @@ BeforeAll { . (Join-Path $PSScriptRoot 'Sandbox.ps1') }
 
 Describe 'role gating' {
     It 'devbox gets core and dev layers' {
-        $r = Invoke-NowhereSession -Role devbox -Probe '"core=" + [bool](Get-Command gst -EA 0); "dev=" + [bool](Get-Command ansible-playbook -EA 0); "editor=$env:EDITOR"'
+        $r = Invoke-NowhereSession -Role devbox -Tools git -Probe '"core=" + [bool](Get-Command gst -EA 0); "dev=" + [bool](Get-Command ansible-playbook -EA 0); "editor=$env:EDITOR"'
         $r.Errors | Should -BeNullOrEmpty
         $r.Output | Should -Contain 'core=True'
         $r.Output | Should -Contain 'dev=True'
         $r.Output | Should -Contain 'editor=code --wait'
     }
     It 'server gets core only' {
-        $r = Invoke-NowhereSession -Role server -Probe '"core=" + [bool](Get-Command gst -EA 0); "dev=" + [bool](Get-Command ansible-playbook -EA 0); "editor=$env:EDITOR"'
+        $r = Invoke-NowhereSession -Role server -Tools git -Probe '"core=" + [bool](Get-Command gst -EA 0); "dev=" + [bool](Get-Command ansible-playbook -EA 0); "editor=$env:EDITOR"'
         $r.Errors | Should -BeNullOrEmpty
         $r.Output | Should -Contain 'core=True'
         $r.Output | Should -Contain 'dev=False'

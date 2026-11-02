@@ -10,3 +10,4 @@ bootstrap/*.sh text eol=lf
 tests/zsh/*.sh text eol=lf
 scripts/*.sh text eol=lf
 tests/parity.txt text eol=lf
+shared/core-tools.txt text eol=lf

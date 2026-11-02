@@ -1,8 +1,10 @@
 # zsh-only scenarios for zsh/core/bin/update (same format as ../scenarios.txt).
-update-apt|zsh|Update-System: system packages|apt-get update and upgrade run
-update-uv|zsh|Update-System: tools|uv self update runs; absent uv is skipped
+update-apt|zsh|n/a (Windows Update instead)|apt-get update and upgrade run
+update-uv|zsh|UpdateSystem.Tests: Invoke-NowhereToolsUpdate|uv self update runs; absent uv is skipped
 update-plugins-drift|zsh|n/a|drifted plugin returns to its pin
 update-plugins-repin|zsh|n/a|a new pin in plugins.json is fetched and checked out
 update-plugins-missing|zsh|n/a|missing plugin is cloned at its pin
 update-continues|zsh|n/a|a failed step does not stop the rest; exit is non-zero
 update-idempotent|zsh|n/a|second run changes nothing
+update-uvtool-repin|zsh|UpdateSystem.Tests: Invoke-NowhereToolsUpdate / runs uv self update|a moved uv tool pin (server-motd) is reinstalled by update, once
+update-release-missing|zsh|n/a|a missing release binary is reinstalled; binaries at their pin are not downloaded

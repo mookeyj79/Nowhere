@@ -1,0 +1,9 @@
+# Core tools the profile leans on at startup. Any one missing gives the single
+# "run bootstrap" hint. Read by both profiles (00-environment.ps1 and
+# 00-environment.zsh) and the tests; every name is a core tool in tools.json.
+starship
+zoxide
+carapace
+fzf
+eza
+git

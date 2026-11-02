@@ -73,7 +73,7 @@ scenario_missing_tools_hint() {
     assert_eq "$(count_matching "$OUT" bootstrap)" 1 'hint count'
 }
 scenario_no_hint_when_complete() {
-    reset_session; SESSION_TOOLS="starship zoxide carapace fzf eza git"
+    reset_session; SESSION_TOOLS="$CORE_TOOLS"
     SESSION_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:C zsh-history-substring-search:zsh-history-substring-search.zsh:D catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:A zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:B"
     session server 'echo ok'
     assert_eq "$(count_matching "$OUT" bootstrap)" 0 'hint count'
@@ -81,13 +81,13 @@ scenario_no_hint_when_complete() {
 
 # --- profile: plugin directory convention ----------------------------------------
 scenario_plugin_skip() {
-    reset_session; SESSION_TOOLS="starship zoxide carapace fzf eza git"
+    reset_session; SESSION_TOOLS="$CORE_TOOLS"
     session devbox 'echo "ok"'
     assert_empty "$ERR"; assert_line "$OUT" ok
     assert_eq "$(count_matching "$OUT" bootstrap)" 1 'one hint for missing plugins'
 }
 scenario_plugin_load() {
-    reset_session; SESSION_TOOLS="starship zoxide carapace fzf eza git"
+    reset_session; SESSION_TOOLS="$CORE_TOOLS"
     SESSION_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:AS_LOADED zsh-history-substring-search:zsh-history-substring-search.zsh:HS_LOADED catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:THEME_LOADED zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:SYNTAX_LOADED"
     session server 'echo "theme=$THEME_LOADED syntax=$SYNTAX_LOADED order=$ORDER"'
     assert_empty "$ERR"

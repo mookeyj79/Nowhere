@@ -3,14 +3,22 @@
 
 $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
+# shared/core-tools.txt: the tools whose absence gives the "run bootstrap" hint.
+function Get-NowhereCoreToolList {
+    @(Get-Content (Join-Path $script:RepoRoot 'shared/core-tools.txt') | Where-Object { $_ -and $_ -notmatch '^\s*#' })
+}
+
+# Invoke-NowhereSession [-Role] [-Probe] [-LocalOverride] [-Tools]
+#   -Tools  shims for exactly these tools; each echoes its name and arguments.
+#           PATH is the shims plus the pwsh directory, nothing from the host,
+#           so leaving -Tools out means no tools at all (as zsh's `session`).
+# Returns { ExitCode, Output, Errors }.
 function Invoke-NowhereSession {
     param(
         [string]$Role,
         [string]$Probe = '',
         [string]$LocalOverride,
-        # Restrict PATH to the pwsh directory plus shims for exactly these tools.
-        # Each shim echoes its own name and arguments.
-        [string[]]$Tools
+        [string[]]$Tools = @()
     )
     $sandbox = Join-Path ([IO.Path]::GetTempPath()) ('nowhere-' + [guid]::NewGuid().ToString('N'))
     $home_ = Join-Path $sandbox 'home'
@@ -19,21 +27,18 @@ function Invoke-NowhereSession {
     if ($PSBoundParameters.ContainsKey('LocalOverride')) {
         Set-Content -Path (Join-Path $cfg 'local.ps1') -Value $LocalOverride
     }
-    $restrictPath = $null
-    if ($PSBoundParameters.ContainsKey('Tools')) {
-        $bin = Join-Path $sandbox 'bin'
-        New-Item -ItemType Directory -Path $bin -Force | Out-Null
-        foreach ($t in $Tools) {
-            if ($IsWindows) {
-                Set-Content -Path (Join-Path $bin "$t.cmd") -Value "@echo $t %*"
-            } else {
-                $f = Join-Path $bin $t
-                Set-Content -Path $f -Value "#!/bin/sh`necho $t `"`$@`""
-                chmod +x $f
-            }
+    $bin = Join-Path $sandbox 'bin'
+    New-Item -ItemType Directory -Path $bin -Force | Out-Null
+    foreach ($t in $Tools) {
+        if ($IsWindows) {
+            Set-Content -Path (Join-Path $bin "$t.cmd") -Value "@echo $t %*"
+        } else {
+            $f = Join-Path $bin $t
+            Set-Content -Path $f -Value "#!/bin/sh`necho $t `"`$@`""
+            chmod +x $f
         }
-        $restrictPath = $bin + [IO.Path]::PathSeparator + (Split-Path (Get-Process -Id $PID).Path)
     }
+    $restrictPath = $bin + [IO.Path]::PathSeparator + (Split-Path (Get-Process -Id $PID).Path)
     $stub = Join-Path $home_ 'stub.ps1'
     $roleLine = if ($Role) { "`$env:NOWHERE_ROLE = '$Role'" } else { '' }
     Set-Content -Path $stub -Value @($roleLine, ". '$(Join-Path $script:RepoRoot 'powershell/profile.ps1')'")

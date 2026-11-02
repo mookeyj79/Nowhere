@@ -14,6 +14,41 @@ function Test-NowhereTool {
     param([Parameter(Mandatory)] [string]$Name)
     [bool](Get-Command $Name -CommandType Application -ErrorAction SilentlyContinue)
 }
+
+# Get-NowhereCachedInit <name> <tool> [args...]: the path of a cached copy of
+# `<tool> [args...]` output (an init or completion script), regenerated only
+# when the tool's binary is newer than the cache, so a warm start spawns
+# nothing. $null when the tool is absent or the generation fails. The caller
+# dot-sources the path, so what the script defines lands in the caller's scope.
+# zsh's counterpart is _nowhere_cached_init in 50-init.zsh.
+function Get-NowhereCachedInit {
+    param(
+        [Parameter(Mandatory)] [string]$Name,
+        [Parameter(Mandatory)] [string]$Tool,
+        [string[]]$Arguments = @()
+    )
+    $bin = Get-Command $Tool -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $bin) { return }
+    $file = Join-Path $global:NowhereCacheDir "$Name.ps1"
+    $fresh = $false
+    if (Test-Path -LiteralPath $file) {
+        try {
+            $fresh = (Get-Item -LiteralPath $file -ErrorAction Stop).LastWriteTimeUtc -gt
+                     (Get-Item -LiteralPath $bin.Source -ErrorAction Stop).LastWriteTimeUtc
+        } catch { }
+    }
+    if (-not $fresh) {
+        try {
+            $out = & $bin.Source @Arguments 2>$null
+            $null = [IO.Directory]::CreateDirectory($global:NowhereCacheDir)
+            [IO.File]::WriteAllText($file, ($out -join "`n"), [Text.UTF8Encoding]::new($false))
+        } catch {
+            Write-Verbose "Failed to generate $Name from ${Tool}: $_"
+            return
+        }
+    }
+    $file
+}
 # Is this an interactive login, not a command session? `ssh host cmd` runs
 # `pwsh -c`, Ansible uses -NonInteractive -EncodedCommand, scripts use -File,
 # and all of them load the profile, so login banners check this first to stay
@@ -43,7 +78,9 @@ function Test-NowhereInteractiveSession {
     $true
 }
 
-$global:NowhereCoreTools ='starship', 'zoxide', 'carapace', 'fzf', 'eza', 'git'
+# The tools whose absence triggers the hint: shared/core-tools.txt, one per line.
+$global:NowhereCoreTools = @(Get-Content -LiteralPath (Join-Path $global:NowhereRepoDir 'shared/core-tools.txt') |
+    Where-Object { $_ -and $_ -notmatch '^\s*#' })
 $global:NowhereHintShown = $false
 
 # Editor: nano by default (dev layer switches to 'code --wait'); local.ps1 can set $NowhereEditor

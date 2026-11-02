@@ -19,13 +19,11 @@ function Edit-Profile {
 }
 Set-Alias -Name editp -Value Edit-Profile
 
+# Brings modules and uv tools to their pins without admin rights; never floats
+# anything. `update` (Update-System, elevated) is the full refresh.
 function Update-PSProfile {
-    Write-Host 'Updating PowerShell modules (to their pins)...' -ForegroundColor Cyan
-    Update-PinnedModules
-    if (Get-Command winget -ErrorAction SilentlyContinue) {
-        Write-Host 'Updating winget packages...' -ForegroundColor Cyan
-        winget upgrade --all --include-unknown --silent
-    }
+    Write-Host 'Bringing modules and uv tools to their pins...' -ForegroundColor Cyan
+    & (Join-Path $global:NowhereRepoDir 'bootstrap/lib/Sync-Pins.ps1') -Role $global:NowhereRole -RepoRoot $global:NowhereRepoDir
     Write-Host "Done. Run 'reload' to pick up changes." -ForegroundColor Green
 }
 

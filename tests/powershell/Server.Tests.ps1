@@ -169,14 +169,6 @@ Describe 'Test-NowhereInteractiveSession' -ForEach @(@{ Cases = $script:SessionC
     }
 }
 
-Describe 'Update-System on a server' {
-    It 'is role-aware and guards winget' {
-        $text = Get-Content (Join-Path $script:RepoRoot 'powershell/core/bin/Update-System.ps1') -Raw
-        $text | Should -Match 'NowhereRole'
-        $text | Should -Match 'Get-Command winget'
-    }
-}
-
 Describe 'docs' {
     It 'README states install-profile and uninstall-profile are not used' {
         $readme = Get-Content (Join-Path $script:RepoRoot 'README.md') -Raw

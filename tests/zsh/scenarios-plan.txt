@@ -1,0 +1,6 @@
+# zsh-only scenarios for bootstrap/lib/plan.sh (same format as ../scenarios.txt).
+plan-layers|zsh|Plan.Tests: Get-NowherePlan / layers|core everywhere, dev on a devbox only
+plan-release|zsh|n/a (release blocks are Linux only)|release lines resolve version, arch map, archive, member and versionArgs, '-' when unpinned
+plan-uvtools|zsh|Plan.Tests: Get-NowherePlan / uv tool specs|uv tools filtered by role, spec from version or source
+plan-plugins|zsh|n/a (pinned modules instead)|one plugin line per pinned plugin
+plan-real-manifest|zsh|n/a|the shipped manifests plan on both roles with no empty field
