@@ -29,7 +29,7 @@ pwsh -File bootstrap/bootstrap.ps1 devbox     # or: server
 bash bootstrap/bootstrap.sh devbox            # or: server
 ```
 
-Bootstrap, in order: installs tools from `shared/tools.json` (winget on Windows, apt plus checksum-pinned release binaries on Linux: starship, carapace and gitleaks, and on a devbox helm, terraform and tofu; core always, dev tools on a devbox), installs `uv` with Astral's official installer if absent, installs pinned PowerShell modules or ZSH plugins, writes the **stub**, seeds the **local override**, points `core.hooksPath` at `.githooks` (the gitleaks pre-commit hook), and on a server installs `server-motd`. Open a new shell afterwards.
+Bootstrap installs tools from `shared/tools.json` (winget on Windows, apt plus checksum-pinned release binaries on Linux: starship, carapace and gitleaks, and on a devbox helm, terraform and tofu; core always, dev tools on a devbox). It installs `uv` with Astral's official installer if absent, installs pinned PowerShell modules or ZSH plugins, writes the **stub**, seeds the **local override**, points `core.hooksPath` at `.githooks` (the gitleaks pre-commit hook), and on a server installs `server-motd`. The header of each bootstrap script lists its exact steps. Open a new shell afterwards.
 
 If a tool, module or plugin is missing, the profile starts silently and prints one hint to run bootstrap.
 
@@ -42,12 +42,12 @@ Windows Server 2022 and older have no winget: bootstrap warns, skips only the co
 | Path | Contents |
 | --- | --- |
 | `shared/` | Shell-neutral files: `starship.toml` (the one Catppuccin Macchiato prompt), `tools.json` (tool manifest, `uvTools` pins), `server-motd/config.toml.example` |
-| `powershell/` | `profile.ps1` entry point, `core/` and `dev/` each with `conf.d/` (numbered files, merged in one filename order) and `bin/`, `modules.json` (pinned modules), `local.ps1.example` |
-| `zsh/` | The same shape: `profile.zsh`, `core/` and `dev/` with `conf.d/` and `bin/` (`update`), `plugins.json` (plugins pinned by SHA, no plugin manager), `local.zsh.example` |
+| `powershell/` | `profile.ps1` entry point, `core/` and `dev/` each with `conf.d/` (numbered files, merged in one filename order), `core/bin/` (`Update-System.ps1`), `modules.json` (pinned modules), `powershell.config.json`, `local.ps1.example` |
+| `zsh/` | The same shape: `profile.zsh`, `core/` and `dev/` with `conf.d/`, `core/bin/` (`update`), `plugins.json` (plugins pinned by SHA, no plugin manager), `local.zsh.example` |
 | `bootstrap/` | `bootstrap.ps1` (Windows) and `bootstrap.sh` (Linux) |
 | `tests/` | Sandboxed suites for both shells and the shared parity list (see Tests) |
 | `docs/` | Agent docs and the [real-machine checklist](docs/real-machine-checklist.md) |
-| `scripts/` | Wayfinder helpers: `frontier.sh`, `map-append.sh`, `resolve.sh` |
+| `scripts/` | Wayfinder helpers for the issue map: `add-blocker.sh`, `frontier.sh`, `map-append.sh`, `resolve.sh` |
 | `.githooks/`, `.github/` | gitleaks pre-commit hook; CI (gitleaks, shellcheck, Pester, zsh harness) |
 
 conf.d numbering (same on both shells): `00` environment, `10` line editor, `20` completions, `30` aliases (one-liners only), `35` helpers (logic), `40` profile commands (`reload`, `editp`, `update`, `aliases`), `41` goto, `42` venv helpers, `50` init (zoxide, Starship), `60` MOTD (PowerShell server only), `90` syntax highlighting (ZSH). Dev layer files use the `01`, `31`, `36`, `43` slots.
@@ -55,7 +55,7 @@ conf.d numbering (same on both shells): `00` environment, `10` line editor, `20`
 ## Stub and local override
 
 - **Stub**: a few lines at `$PROFILE` (PowerShell) or `~/.zshrc` (ZSH) that set `NOWHERE_ROLE` (`devbox` or `server`) and source the profile from the clone. Bootstrap writes it and backs up a different existing one.
-- **Local override**: `~/.config/nowhere/local.ps1` or `local.zsh`, outside the repo and never committed, sourced before any conf.d file. It holds machine-specific values: `NOWHERE_HOME`, `CONFCRYPT_HOME`, the editor, `goto` bookmarks, the WSL distro, tokens. Every key is optional and read with a default. Bootstrap seeds it from `local.ps1.example` / `local.zsh.example` with owner-only permissions and never overwrites it.
+- **Local override**: `~/.config/nowhere/local.ps1` or `local.zsh`, outside the repo and never committed, sourced before any conf.d file. It holds machine-specific values: `NOWHERE_HOME`, the editor, `goto` bookmarks, the WSL distro, tokens. Every key is optional and read with a default. Bootstrap seeds it from `local.ps1.example` / `local.zsh.example` with owner-only permissions and never overwrites it.
 
 ## Servers and the MOTD
 
@@ -68,7 +68,7 @@ Both configs are seeded from `shared/server-motd/config.toml.example`, mode owne
 
 ## `update`
 
-The one maintenance name on every role. On Windows it runs `Update-System` (Windows Update, winget, `uv self update` and the PowerShell modules at their pinned versions, WSL, disk cleanup; a server runs Windows Update and winget by default, `-WSL` and `-DiskCleanup` are explicit). On Linux it runs `zsh/core/bin/update` (apt, ZSH plugins at their pinned SHAs, `uv self update`). It is the only thing besides bootstrap that installs or upgrades.
+The one maintenance name on every role. On Windows it runs `Update-System`, which needs an elevated session: Windows Update, winget, `uv self update` and the PowerShell modules at their pinned versions, WSL, and disk cleanup. Switches (`-Windows`, `-Winget`, `-Tools`, `-WSL`, `-DiskCleanup`) pick individual steps. On a server a bare `update` skips WSL and disk cleanup, which stay available as explicit switches. On Linux it runs `zsh/core/bin/update` (apt, ZSH plugins at their pinned SHAs, `uv self update`). It is the only thing besides bootstrap that installs or upgrades.
 
 ## Tests
 
@@ -80,6 +80,8 @@ The one maintenance name on every role. On Windows it runs `Update-System` (Wind
 
 The sandboxes cannot show that a real machine feels right; use [`docs/real-machine-checklist.md`](docs/real-machine-checklist.md) after bootstrapping each role.
 
-## Contributing
+## Committing
+
+This is a personal setup, shared for reference: fork it and adapt it rather than sending pull requests.
 
 Bootstrap enables the secrets hook. On a clone you did not bootstrap, run `git config core.hooksPath .githooks`; it needs [gitleaks](https://github.com/gitleaks/gitleaks) installed.

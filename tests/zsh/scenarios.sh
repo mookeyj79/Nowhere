@@ -24,15 +24,15 @@ scenario_role_unset() {
 # --- profile: local override -----------------------------------------------------
 scenario_local_none() {
     reset_session; SESSION_TOOLS="git"
-    session devbox 'echo "confcrypt=[$CONFCRYPT_HOME]"; echo "home=$NOWHERE_HOME"'
+    session devbox 'echo "home=$NOWHERE_HOME"'
     assert_empty "$ERR"; assert_eq "$CODE" 0
-    assert_line "$OUT" 'confcrypt=[]'; assert_line "$OUT" "home=$REPO_ROOT"
+    assert_line "$OUT" "home=$REPO_ROOT"
 }
 scenario_local_wins() {
     reset_session; SESSION_TOOLS="git"
-    SESSION_LOCAL='NowhereEditor=vim; export CONFCRYPT_HOME=/x/confcrypt'
-    session devbox 'echo "editor=$EDITOR"; echo "confcrypt=$CONFCRYPT_HOME"'
-    assert_empty "$ERR"; assert_line "$OUT" editor=vim; assert_line "$OUT" confcrypt=/x/confcrypt
+    SESSION_LOCAL='NowhereEditor=vim'
+    session devbox 'echo "editor=$EDITOR"'
+    assert_empty "$ERR"; assert_line "$OUT" editor=vim
 }
 scenario_local_nowhere_home() {
     reset_session; SESSION_TOOLS="git"

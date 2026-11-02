@@ -1,4 +1,4 @@
-#Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.0.0' }
+#Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.5.0' }
 # Cross-shell parity: consumes tests/parity.txt, the same list the zsh runner
 # (tests/zsh/scenarios-parity.sh) consumes. One pwsh session per role+tools group.
 

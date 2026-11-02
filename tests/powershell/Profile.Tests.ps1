@@ -1,4 +1,4 @@
-#Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.0.0' }
+#Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.5.0' }
 
 BeforeAll { . (Join-Path $PSScriptRoot 'Sandbox.ps1') }
 
@@ -25,18 +25,16 @@ Describe 'role gating' {
 
 Describe 'local override' {
     It 'starts cleanly with defaults when no override exists' {
-        $r = Invoke-NowhereSession -Role devbox -Probe '"confcrypt=[$env:CONFCRYPT_HOME]"; "goto=" + [bool](Get-Command goto -EA 0)'
+        $r = Invoke-NowhereSession -Role devbox -Probe '"goto=" + [bool](Get-Command goto -EA 0)'
         $r.Errors | Should -BeNullOrEmpty
         $r.ExitCode | Should -Be 0
-        $r.Output | Should -Contain 'confcrypt=[]'
         $r.Output | Should -Contain 'goto=True'
     }
     It 'override values win over defaults' {
-        $local = '$NowhereEditor = "vim"; $env:CONFCRYPT_HOME = "/x/confcrypt"'
-        $r = Invoke-NowhereSession -Role devbox -LocalOverride $local -Probe '"editor=$env:EDITOR"; "confcrypt=$env:CONFCRYPT_HOME"'
+        $local = '$NowhereEditor = "vim"'
+        $r = Invoke-NowhereSession -Role devbox -LocalOverride $local -Probe '"editor=$env:EDITOR"'
         $r.Errors | Should -BeNullOrEmpty
         $r.Output | Should -Contain 'editor=vim'
-        $r.Output | Should -Contain 'confcrypt=/x/confcrypt'
     }
     It 'is sourced before conf.d, so conf.d reads its values' {
         $local = '$NowhereAnsibleWslDistro = "ubuntu"; $NowhereGotoBookmarks = @{ lab = "/lab" }'

@@ -55,5 +55,3 @@ export NOWHERE_CACHE_DIR=${XDG_CACHE_HOME:-$HOME/.cache}/nowhere
 
 # Local bin (uv and the pinned gitleaks land here)
 [[ -d $HOME/.local/bin ]] && path=($HOME/.local/bin $path)
-
-# ConfCrypt: machine-specific, set CONFCRYPT_HOME in local.zsh (no default)

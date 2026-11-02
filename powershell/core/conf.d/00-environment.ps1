@@ -77,5 +77,3 @@ if (Test-Path $kubeDir) {
         $env:KUBECONFIG = ($configs.FullName -join [IO.Path]::PathSeparator)
     }
 }
-
-# ConfCrypt: machine-specific, set $env:CONFCRYPT_HOME in local.ps1 (no default)

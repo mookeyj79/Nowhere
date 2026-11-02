@@ -8,14 +8,11 @@
 # Where the clone lives (default: the clone this profile is loaded from)
 # export NOWHERE_HOME="$HOME/src/Nowhere"
 
-# ConfCrypt checkout (no default; unset means ConfCrypt is not wired up)
-# export CONFCRYPT_HOME="$HOME/src/confcrypt"
-
 # Editor override (default: nano on servers, 'code --wait' on devboxes)
 # NowhereEditor='code --wait'
 
 # Extra or overriding `goto` bookmarks (name=path)
-# typeset -A NowhereGotoBookmarks=(lab "$HOME/src/homelab")
+# typeset -A NowhereGotoBookmarks=(src "$HOME/src")
 
 # Tokens (plaintext; this file must stay owner-only)
 # export GITHUB_TOKEN=''

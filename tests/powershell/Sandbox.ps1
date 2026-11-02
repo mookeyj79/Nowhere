@@ -42,7 +42,7 @@ function Invoke-NowhereSession {
         HOME = $home_; USERPROFILE = $home_; LOCALAPPDATA = (Join-Path $home_ 'AppData/Local')
         XDG_CONFIG_HOME = (Join-Path $home_ '.config'); XDG_CACHE_HOME = (Join-Path $sandbox 'xdg')
         XDG_DATA_HOME = (Join-Path $sandbox 'xdg'); NOWHERE_ROLE = $null; NOWHERE_HOME = $null
-        CONFCRYPT_HOME = $null; EDITOR = $null; VISUAL = $null
+        EDITOR = $null; VISUAL = $null
     }
     if ($restrictPath) { $vars['PATH'] = $restrictPath }
     $saved = @{}
