@@ -7,3 +7,7 @@
 # Pester output (written by Invoke-Pester -CI)
 testResults.xml
 coverage.xml
+
+# uv: local virtualenv and lockfile
+.venv/
+uv.lock
