@@ -84,12 +84,21 @@ if (($tools | Where-Object installer -eq 'astral') -and -not (Get-Command uv -Er
 
 # --- 2b. uv tools (server-motd on servers) -------------------------------------
 $uvTools = @($manifest.uvTools | Where-Object { $_ -and $Role -in $_.roles })
+# A tool is pinned by 'version' (PyPI: name==version) or 'source' (a git URL at
+# a commit: name @ source). Installed means `uv tool list --show-version-specifiers`
+# shows that exact pin; anything else is (re)installed.
 foreach ($t in $uvTools) {
     if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { throw "uv not found; cannot install $($t.name)" }
-    $listed = @(& uv tool list 2>$null)
-    if (@($listed -match ('^' + [regex]::Escape($t.name) + ' v' + [regex]::Escape($t.version) + '(\s|$)')).Count) { continue }
-    Step "installing $($t.name) $($t.version) (uv tool)"
-    & uv tool install "$($t.name)==$($t.version)"
+    $listed = @(& uv tool list --show-version-specifiers 2>$null) -match ('^' + [regex]::Escape($t.name) + ' v')
+    if ($t.source) {
+        $spec = "$($t.name) @ $($t.source)"
+        if (@($listed | Where-Object { $_.Contains(" $($t.source)]") }).Count) { continue }
+    } else {
+        $spec = "$($t.name)==$($t.version)"
+        if (@($listed -match ('^' + [regex]::Escape($t.name) + ' v' + [regex]::Escape($t.version) + '(\s|$)')).Count) { continue }
+    }
+    Step "installing $spec (uv tool)"
+    & uv tool install $spec
     if ($LASTEXITCODE -ne 0) { throw "uv tool install $($t.name) failed (exit $LASTEXITCODE)" }
 }
 if ($uvTools.name -contains 'server-motd') {

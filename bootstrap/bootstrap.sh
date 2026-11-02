@@ -141,11 +141,23 @@ uv_system_tool() {
     # sudo's secure_path hides ~/.local/bin, so hand it uv by absolute path.
     $SUDO env "UV_TOOL_DIR=$UVTOOL_DIR" "UV_TOOL_BIN_DIR=$UVTOOL_BIN_DIR" "$(command -v uv)" tool "$@"
 }
-while IFS=$'\t' read -r name version; do
+# A tool is pinned by 'version' (PyPI: name==version) or 'source' (a git URL at
+# a commit: name @ source); '-' marks the absent one, since a tab IFS merges
+# empty fields. Installed means `uv tool list --show-version-specifiers` shows
+# that exact pin; anything else is (re)installed.
+while IFS=$'\t' read -r name version source; do
     command -v uv > /dev/null 2>&1 || die "uv not found; cannot install $name"
-    if ! uv_system_tool list 2> /dev/null | grep -qE "^$name v${version//./\\.}( |\$)"; then
-        step "installing $name $version (uv tool, system-wide)"
-        uv_system_tool install "$name==$version" || die "uv tool install $name failed"
+    listed=$(uv_system_tool list --show-version-specifiers 2> /dev/null | grep -E "^$name v" || true)
+    if [ "$source" != - ]; then
+        spec="$name @ $source"
+        case "$listed" in *" $source]"*) spec= ;; esac
+    else
+        spec="$name==$version"
+        case "$listed" in "$name v$version "* | "$name v$version") spec= ;; esac
+    fi
+    if [ -n "$spec" ]; then
+        step "installing $spec (uv tool, system-wide)"
+        uv_system_tool install "$spec" || die "uv tool install $name failed"
     fi
     if [ "$name" = server-motd ]; then
         MOTD_BIN=$UVTOOL_BIN_DIR/$name
@@ -163,7 +175,7 @@ while IFS=$'\t' read -r name version; do
             step "wrote $MOTD_DIR/50-server-motd"
         fi
     fi
-done < <(jq -r --arg r "$ROLE" '.uvTools[]? | select(.roles | index($r)) | [.name, .version] | @tsv' "$MANIFEST")
+done < <(jq -r --arg r "$ROLE" '.uvTools[]? | select(.roles | index($r)) | [.name, (.version // "-"), (.source // "-")] | @tsv' "$MANIFEST")
 
 # --- 4. Pinned zsh plugins ----------------------------------------------------
 while IFS=$'\t' read -r name repo sha; do
