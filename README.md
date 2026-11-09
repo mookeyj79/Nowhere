@@ -1,5 +1,7 @@
 # Nowhere
 
+[![CI](https://github.com/mookeyj79/Nowhere/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/mookeyj79/Nowhere/actions/workflows/gitleaks.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 My personal shell environment: one setup that feels the same on every machine I log into. PowerShell on Windows, ZSH on Linux. Terms are defined in [`GLOSSARY.md`](GLOSSARY.md); the design history and decisions live in the wayfinder map, [issue #1](https://github.com/mookeyj79/Nowhere/issues/1).
 
 ## Roles
@@ -9,7 +11,7 @@ Four roles: Windows DevBox, Windows Server, Linux DevBox, Linux Server. A **core
 | Role | Shell | Layers | Bootstrap | `EDITOR` | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Windows DevBox | PowerShell 7 | core + dev | `bootstrap/bootstrap.ps1 devbox` | `code --wait` | kubectl/helm/docker/terraform/tofu aliases, Ansible via WSL |
-| Windows Server | PowerShell 7 | core | `bootstrap/bootstrap.ps1 server` | `nano` | `server-motd` at login, `update` = Windows Update + winget |
+| Windows Server | PowerShell 7 | core | `bootstrap/bootstrap.ps1 server` | `nano` | `server-motd` at login, `update` = Windows Update, winget and pins |
 | Linux DevBox | ZSH | core + dev | `bootstrap/bootstrap.sh devbox` | `code --wait` | dev aliases, tools guarded by presence |
 | Linux Server | ZSH | core | `bootstrap/bootstrap.sh server` | `nano` | `server-motd` via the root `update-motd.d` hook |
 
@@ -52,7 +54,7 @@ Windows Server 2022 and older have no winget: bootstrap warns, skips only the co
 | `scripts/` | Wayfinder helpers for the issue map: `add-blocker.sh`, `frontier.sh`, `map-append.sh`, `resolve.sh` |
 | `.githooks/`, `.github/` | gitleaks pre-commit hook; CI (gitleaks, shellcheck, Pester, zsh harness) |
 
-conf.d numbering (same on both shells): `00` environment, `10` line editor, `20` completions, `30` aliases (one-liners only), `35` helpers (logic), `40` profile commands (`reload`, `editp`, `update`, `aliases`), `41` goto, `42` venv helpers, `50` init (zoxide, Starship), `60` MOTD (PowerShell server only), `90` syntax highlighting (ZSH). Dev layer files use the `01`, `31`, `36`, `43` slots.
+conf.d numbering (same on both shells): `00` environment, `10` line editor, `20` completions, `30` aliases (one-liners only), `35` helpers (logic), `40` profile commands (`reload`, `editp`, `update`, `aliases`), `41` goto, `42` venv helpers, `50` init (zoxide, Starship), `60` MOTD (PowerShell server only), `90` syntax highlighting (ZSH). Dev layer files use the `01`, `31` and `36` slots, plus `43` (Ansible via WSL) on PowerShell.
 
 ## Stub and local override
 
@@ -78,7 +80,7 @@ The one maintenance name on every role. On Windows it runs `Update-System`, whic
 - `tests/powershell/`: Pester 5.5+ against a real `pwsh` in a throwaway HOME. Run `Invoke-Pester tests/powershell` (slow, several minutes). Pester result files (`testResults.xml`) are git-ignored; CI writes its own to the runner's temp directory.
 - `tests/scenarios.txt` (and `tests/zsh/scenarios-*.txt`) lists the scenario ids and their pwsh counterparts. Before running anything, the zsh harness checks that every line is a well-formed record, no id appears twice, and the index and the `scenario_*` functions match in both directions (`tests/zsh/index.sh`). `Parity.Tests.ps1` checks the same records and that every counterpart it names exists.
 - `tests/parity.txt` is the one list **both** suites read (`Parity.Tests.ps1` and `scenarios-parity.sh`): core command names, tool guards, role gating, `EDITOR` defaults, the local override, and missing-tool silence must be identical in pwsh and zsh. Each row picks a role, the tools on PATH (or `core` for a complete install) and a local override, then checks a command, a variable or the hint count. Add a line there to extend the parity contract.
-- `tests/uvtools-smoke.sh`: installs every `uvTools` pin in the install plan with the real `uv` (network), runs its `--help`, and checks that pins recognises it at its pin from the real `uv tool list` output (and does not mistake another pin for it). Both sandboxes fake `uv`, so this is the only check of that listing format. Needs `uv`, `jq` and `bash` (and `pwsh` on Windows).
+- `tests/uvtools-smoke.sh`: installs every `uvTools` pin in the install plan with the real `uv` (network), runs its `--help`, and checks that pins recognises it at its pin from the real `uv tool list` output (and does not mistake another pin for it). Both sandboxes fake `uv`, so this is the only check of that listing format. Needs `uv`, `jq` and `bash` (and `pwsh` on Windows). Run `sh tests/uvtools-smoke.sh`.
 - CI (`.github/workflows/gitleaks.yml`) runs gitleaks, shellcheck, Pester on Windows, the zsh harness on Ubuntu, and the uvTools smoke test on both.
 
 The sandboxes cannot show that a real machine feels right; use [`docs/real-machine-checklist.md`](docs/real-machine-checklist.md) after bootstrapping each role.
@@ -88,3 +90,7 @@ The sandboxes cannot show that a real machine feels right; use [`docs/real-machi
 This is a personal setup, shared for reference: fork it and adapt it rather than sending pull requests.
 
 Bootstrap enables the secrets hook. On a clone you did not bootstrap, run `git config core.hooksPath .githooks`; it needs [gitleaks](https://github.com/gitleaks/gitleaks) installed.
+
+## License
+
+[MIT](LICENSE).
