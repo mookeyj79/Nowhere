@@ -53,7 +53,7 @@ The numbered directory of small profile files (`core/conf.d`, `dev/conf.d`) that
 _Avoid_: profile.d, includes
 
 **Parity list**:
-`tests/parity.txt`, the single list of core command names and key behaviours (role gating, `EDITOR` defaults, missing-tool silence) that both the Pester and zsh suites read, so the four roles are checked against one definition of "feels the same".
+`tests/parity.txt`, the single list of core command names and key behaviours (tool guards, role gating, `EDITOR` defaults, the local override, missing-tool silence) that both the Pester and zsh suites read, so the four roles are checked against one definition of "feels the same".
 _Avoid_: scenario copy, mirror tests
 
 **Server MOTD**:

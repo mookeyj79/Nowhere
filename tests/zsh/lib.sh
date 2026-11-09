@@ -12,6 +12,9 @@ REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 ZSH_BIN=$(command -v zsh || true)
 # shared/core-tools.txt as a space list: SESSION_TOOLS for "every core tool present"
 CORE_TOOLS=$(grep -v '^#' "$REPO_ROOT/shared/core-tools.txt" | tr '\n' ' ')
+# Every pinned plugin as SESSION_PLUGINS stubs (name:file-the-profile-sources:VAR):
+# with CORE_TOOLS, a complete core install (the parity list's "core" tools).
+ALL_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:C zsh-history-substring-search:zsh-history-substring-search.zsh:D catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:A zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:B"
 SANDBOXES=()
 
 cleanup_sandboxes() {

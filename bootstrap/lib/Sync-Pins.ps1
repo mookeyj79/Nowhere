@@ -19,6 +19,7 @@ param(
 )
 
 . (Join-Path $PSScriptRoot 'Plan.ps1')
+. (Join-Path $PSScriptRoot 'UvToolPin.ps1')
 $script:failed = $false
 function Fail([string]$Message) {
     if ($Strict) { throw $Message }

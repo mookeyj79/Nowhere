@@ -25,6 +25,8 @@ STRICT=false
 case "${1:-}" in --strict) STRICT=true ;; "") ;; *) usage ;; esac
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=bootstrap/lib/uvtool-pin.sh
+. "$HERE/uvtool-pin.sh"
 BIN_DIR=$HOME/.local/bin
 PLUGIN_DIR=$HOME/.local/share/nowhere/plugins
 UVTOOL_DIR=${NOWHERE_UVTOOL_DIR:-/opt/nowhere/uv-tools}
@@ -71,20 +73,8 @@ uv_system_tool() {
     # sudo's secure_path hides ~/.local/bin, so hand it uv by absolute path.
     $SUDO env "UV_TOOL_DIR=$UVTOOL_DIR" "UV_TOOL_BIN_DIR=$UVTOOL_BIN_DIR" "$(command -v uv)" tool "$@"
 }
-# Is <spec> what `uv tool list --show-version-specifiers` (<listing>) shows?
-#   name @ source   a "name v..." line ending in " <source>]"
-#   name==version   a "name v<version>" line
-uv_pinned() {
-    local spec=$1 listed=$2 name version
-    case "$spec" in
-        *" @ "*)
-            name=${spec%% @ *}
-            grep -E "^$name v" <<< "$listed" | grep -qF " ${spec#* @ }]" ;;
-        *)
-            name=${spec%%==*}; version=${spec#*==}
-            grep -qE "^$name v${version//./\\.}( |\$)" <<< "$listed" ;;
-    esac
-}
+# uv_pinned <spec> <listing>: uvtool-pin.sh, also checked against the real uv
+# by tests/uvtools-smoke.sh.
 pin_uvtool() {
     local name=$1 spec=$2 listed
     if ! command -v uv > /dev/null 2>&1; then

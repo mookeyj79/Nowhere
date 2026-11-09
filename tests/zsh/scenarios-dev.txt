@@ -1,6 +1,6 @@
 dev-aliases-all|zsh|Contract.Tests: dev alias layer|k* h dc* dps tf* to* (with topl) exist on devbox with every tool, none on server
 dev-aliases-run|zsh|Contract.Tests: dev alias layer|aliases expand to the PowerShell commands (topl is tofu plan)
-dev-tool-gating|zsh|Contract.Tests: dev alias layer / terraform/kubectl/docker aliases are guarded|each family and kns appear only when its tool is present
+dev-tool-gating|zsh|n/a (parity list: role-*)|each family and kns appear only when its tool is present
 dev-kns|zsh|Contract.Tests: dev alias layer / kns switches namespace|kns sets the namespace, d and default map to default; absent on server
 dev-editor|zsh|n/a (parity list: editor-devbox)|devbox EDITOR and VISUAL are code --wait, local override wins, server stays nano
 dev-boot-tools|zsh|n/a (apt on Linux)|bootstrap devbox installs kubectl docker gh packages; server installs none

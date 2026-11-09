@@ -5,6 +5,7 @@
 BeforeAll {
     $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
     . (Join-Path $script:RepoRoot 'bootstrap/lib/Plan.ps1')
+    . (Join-Path $script:RepoRoot 'bootstrap/lib/UvToolPin.ps1')
     $script:Sync = Join-Path $script:RepoRoot 'bootstrap/lib/Sync-Pins.ps1'
     # Pester mocks only commands that exist; PowerShellGet is not on every host.
     if (-not (Get-Command Install-Module -ErrorAction SilentlyContinue)) {

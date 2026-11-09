@@ -158,6 +158,29 @@ scenario_core_init_regen() {
     assert_line "$OUT" 'old-bin: echo warm'
     assert_line "$OUT" 'new-bin: starship init zsh'
 }
+# A generator shim for core-init-rules: quiet prints nothing; broken prints a
+# script but exits 1. Both log each run to gen.log.
+init_rules_shim() {
+    case $2 in
+        quiet) printf '#!/bin/sh\necho quiet >> "%s/gen.log"\n' "$3" > "$1" ;;
+        broken) printf '#!/bin/sh\necho broken >> "%s/gen.log"\necho BROKEN=1\nexit 1\n' "$3" > "$1" ;;
+    esac
+}
+scenario_core_init_rules() {
+    # empty output is cached and not regenerated; a failing generator caches
+    # and sources nothing, and is retried next time
+    reset_session; SESSION_TOOLS="quiet broken"; SESSION_SHIM=init_rules_shim; SESSION_REAL="touch"
+    session server 'touch -d "2000-01-01" ${commands[quiet]:A} ${commands[broken]:A}
+        repeat 2 { nowhere_cached_init quiet-init quiet; nowhere_cached_init broken-init broken }
+        [[ -e $NOWHERE_CACHE_DIR/quiet-init.zsh ]] && echo quiet=cached
+        [[ -e $NOWHERE_CACHE_DIR/broken-init.zsh ]] || echo broken=uncached
+        echo "sourced=[$BROKEN]"'
+    assert_empty "$ERR"
+    assert_line "$OUT" quiet=cached; assert_line "$OUT" broken=uncached; assert_line "$OUT" 'sourced=[]'
+    local log; log=$(cat "$SESSION_SB/gen.log")
+    assert_eq "$(count_matching "$log" quiet)" 1 'quiet generated once'
+    assert_eq "$(count_matching "$log" broken)" 2 'broken retried'
+}
 scenario_core_init_absent() {
     reset_session; SESSION_TOOLS=""
     session server 'echo "cfg=[$STARSHIP_CONFIG]"; echo "cdi=${+functions[cdi]}"'

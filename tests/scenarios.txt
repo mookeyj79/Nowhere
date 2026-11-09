@@ -1,23 +1,16 @@
 # Shared scenario list for the shell harnesses.
 #   id | shells (both = pwsh and zsh; zsh = zsh only) | pwsh counterpart | what it asserts
-# tests/zsh/run.sh runs every line that lists zsh and fails a line with no
-# scenario_<id> implementation. The pwsh counterpart column is one of
+# tests/zsh/run.sh runs every line that lists zsh. It fails a line that is not
+# a record, an id listed twice, a zsh line with no scenario_<id>, and a
+# scenario_* function that no line lists (tests/zsh/index.sh). The pwsh counterpart column is one of
 #   <File>.Tests: <Describe>[ / <It prefix>]   (required on a both line)
 #   <name>.ps1: <what>                         (a pointer to the pwsh source)
 #   n/a [why]
-# tests/powershell/Parity.Tests.ps1 checks that every named test and file
-# exists, here and in tests/zsh/scenarios-*.txt.
-role-devbox|both|Profile.Tests: role gating / devbox gets core and dev layers|devbox exposes core and dev; EDITOR is code --wait
-role-server|both|Profile.Tests: role gating / server gets core only|server exposes core only; EDITOR is nano
-role-unset|both|Profile.Tests: role gating / an unset role behaves like server|no role means server
-local-none|both|Profile.Tests: local override / starts cleanly with defaults|no override file still starts with defaults
-local-wins|both|Profile.Tests: local override / override values win|override values beat defaults
+# tests/powershell/Parity.Tests.ps1 checks the same records and that every
+# named test and file exists, here and in tests/zsh/scenarios-*.txt.
+# Checks that both shells share (role gating, the local override, tool guards,
+# the missing-tools hint) are rows of tests/parity.txt, not lines here.
 local-nowhere-home|zsh|profile.ps1: NOWHERE_HOME default|override can set NOWHERE_HOME; default is the clone
-local-empty|both|Profile.Tests: local override / tolerates an empty override|empty override is fine
-tool-guard-git|both|Contract.Tests: tool-guarded aliases|git aliases exist only when git is on PATH
-dev-aliases-guarded|both|Contract.Tests: dev alias layer|dev aliases only on devbox and only with their tool
-missing-tools-hint|both|Contract.Tests: missing tools / starts silently apart from one run-bootstrap hint|no tools: no errors, exactly one run-bootstrap hint
-no-hint-when-complete|both|Contract.Tests: missing tools / prints no hint when nothing is missing|all core tools present: no hint
 plugin-skip|zsh|n/a (modules are pinned PowerShell modules)|missing plugins are skipped silently with one hint
 plugin-load|zsh|n/a|plugins load from the plugin directory in conf.d order
 boot-reject-role|both|Bootstrap.Tests: role argument|invalid role changes nothing
@@ -38,8 +31,8 @@ boot-release-core|zsh|n/a (winget carries them)|starship, carapace and gitleaks 
 boot-release-dev|zsh|n/a (winget carries them)|devbox adds helm, terraform (zip) and tofu from pinned releases; server does not
 boot-linux-routes|zsh|n/a|every core tool has an apt, release or installer route on Linux; code is documented devbox-manual
 boot-plugins-pinned|zsh|n/a (pinned modules instead)|plugins cloned at pinned SHAs; drift corrected
-core-eza-aliases|zsh|Contract.Tests: tool-guarded aliases / eza aliases exist|ls ll la lt llt exist only with eza
-core-git-aliases|zsh|Contract.Tests: tool-guarded aliases / core git aliases|every g* alias present with the PowerShell flags
+core-eza-aliases|zsh|n/a (parity list: guard-eza-*)|ls ll la lt llt exist only with eza
+core-git-aliases|zsh|30-aliases.ps1: git aliases|every g* alias present with the PowerShell flags
 core-dot-up|zsh|n/a (parity list: core-up1 to core-up4)|.. through ..... go up
 core-bat-fd-debian|zsh|n/a (Debian packaging)|batcat and fdfind get bat and fd aliases only when the plain names are absent
 core-helpers|zsh|n/a (parity list: mkcd, gcl, wget)|gcl mkcd touch wget which resolve; mkcd and gcl change directory
@@ -54,4 +47,5 @@ core-env|zsh|n/a (parity list: EDITOR defaults)|PAGER LESS EDITOR defaults and l
 core-init-cache|zsh|Contract.Tests: cached init / caches|zoxide and starship init cached under the XDG cache, shared starship.toml used
 core-init-regen|zsh|Contract.Tests: cached init / regenerates|cache reused until the binary is newer
 core-init-absent|zsh|Contract.Tests: cached init / an absent tool|no zoxide or starship: no init, no errors
-parity|both|Parity.Tests: parity list|tests/parity.txt read by both suites: identical core command names, role gating, EDITOR defaults, missing-tool silence
+core-init-rules|zsh|Contract.Tests: cached init / a failing generator|empty output is cached once; a failing generator caches and sources nothing
+parity|both|Parity.Tests: parity list|tests/parity.txt read by both suites: identical core command names, tool guards, role gating, EDITOR defaults, the local override, missing-tool silence

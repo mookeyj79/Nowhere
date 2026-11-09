@@ -22,13 +22,14 @@ csession() {
 }
 cs_gen_log() { cat "$CS_SB/gen.log" 2> /dev/null || true; }
 cs_gen_count() { cs_gen_log | wc -l | tr -d ' '; }
-CS_CACHE=xdg/nowhere/completions
+CS_CACHE=xdg/nowhere            # generated scripts (nowhere_cached_init)
+CS_DUMP=xdg/nowhere/completions # the compinit dump
 
 scenario_completions_compinit() {
     CS_TOOLS=""
     csession 'echo "compdef=${+functions[compdef]}"; echo "mode=$NowhereCompinitMode"'
     assert_line "$OUT" compdef=1; assert_line "$OUT" mode=fresh; assert_empty "$ERR"
-    assert_file "$CS_SB/$CS_CACHE/zcompdump"
+    assert_file "$CS_SB/$CS_DUMP/zcompdump"
 }
 scenario_completions_menu_select() {
     CS_TOOLS=""
@@ -43,7 +44,7 @@ scenario_completions_dump_cache() {
     csession ':'
     csession 'echo "mode=$NowhereCompinitMode"' "$CS_SB"
     assert_line "$OUT" mode=cached
-    touch -d '2 days ago' "$CS_SB/$CS_CACHE/zcompdump"
+    touch -d '2 days ago' "$CS_SB/$CS_DUMP/zcompdump"
     csession 'echo "mode=$NowhereCompinitMode"' "$CS_SB"
     assert_line "$OUT" mode=fresh
 }
