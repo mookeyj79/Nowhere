@@ -1,56 +1,76 @@
 # Cross-shell parity list: ONE file, read by BOTH suites.
 #   tests/powershell/Parity.Tests.ps1 (pwsh) and tests/zsh/scenarios-parity.sh (zsh)
 # Each line is a check on a fresh sandboxed session; both shells must agree.
-#   id|shells|role|tools|check|arg|expect
+#   id|shells|role|tools|local|check|arg|expect
 # shells : both | pwsh | zsh  (a line is skipped by shells not listed)
 # role   : devbox | server | unset
-# tools  : comma list of shimmed tools on PATH, or - for none (empty PATH)
+# tools  : comma list of shimmed tools on PATH, - for none (empty PATH), or
+#          core for a complete core install: every tool in shared/core-tools.txt
+#          (and, on zsh, every pinned plugin)
+# local  : the local override: - for no file, empty for an empty file, or
+#          Name=value pairs joined by ; (each shell writes them in its own
+#          syntax: Name='value' in local.zsh, $Name = 'value' in local.ps1)
 # check  : cmd   arg=command name; expect present|absent (alias, function or command)
 #          env   arg=variable name; expect its value
 #          hint  arg=-; expect number of "run bootstrap" hint lines on startup
-# Lines with the same role+tools share one session, so keep this list cheap.
+# Lines with the same role+tools+local share one session, so keep this list
+# cheap. Every session must also start cleanly: exit 0, nothing on stderr.
 #
 # Core commands that exist on every role with no tools installed
-core-reload|both|server|-|cmd|reload|present
-core-editp|both|server|-|cmd|editp|present
-core-aliases|both|server|-|cmd|aliases|present
-core-update|both|server|-|cmd|update|present
-core-goto|both|server|-|cmd|goto|present
-core-mkcd|both|server|-|cmd|mkcd|present
-core-gcl|both|server|-|cmd|gcl|present
-core-wget|both|server|-|cmd|wget|present
-core-workon|both|server|-|cmd|workon|present
-core-mkvirtualenv|both|server|-|cmd|mkvirtualenv|present
-core-lsvirtualenv|both|server|-|cmd|lsvirtualenv|present
-core-rmvirtualenv|both|server|-|cmd|rmvirtualenv|present
-core-cdvirtualenv|both|server|-|cmd|cdvirtualenv|present
-core-up1|both|server|-|cmd|..|present
-core-up2|both|server|-|cmd|...|present
-core-up3|both|server|-|cmd|....|present
-core-up4|both|server|-|cmd|.....|present
+core-reload|both|server|-|-|cmd|reload|present
+core-editp|both|server|-|-|cmd|editp|present
+core-aliases|both|server|-|-|cmd|aliases|present
+core-update|both|server|-|-|cmd|update|present
+core-goto|both|server|-|-|cmd|goto|present
+core-mkcd|both|server|-|-|cmd|mkcd|present
+core-gcl|both|server|-|-|cmd|gcl|present
+core-wget|both|server|-|-|cmd|wget|present
+core-workon|both|server|-|-|cmd|workon|present
+core-mkvirtualenv|both|server|-|-|cmd|mkvirtualenv|present
+core-lsvirtualenv|both|server|-|-|cmd|lsvirtualenv|present
+core-rmvirtualenv|both|server|-|-|cmd|rmvirtualenv|present
+core-cdvirtualenv|both|server|-|-|cmd|cdvirtualenv|present
+core-up1|both|server|-|-|cmd|..|present
+core-up2|both|server|-|-|cmd|...|present
+core-up3|both|server|-|-|cmd|....|present
+core-up4|both|server|-|-|cmd|.....|present
 # Tool-guarded: absent without the tool, present with it
-guard-git-absent|both|server|-|cmd|gst|absent
-guard-eza-absent|both|server|-|cmd|ll|absent
-guard-git-present|both|server|git|cmd|gst|present
-guard-git-gco|both|server|git|cmd|gco|present
-guard-git-glog|both|server|git|cmd|glog|present
-guard-eza-present|both|server|eza|cmd|ll|present
-guard-eza-la|both|server|eza|cmd|la|present
-guard-eza-lt|both|server|eza|cmd|lt|present
+guard-git-absent|both|server|-|-|cmd|gst|absent
+guard-eza-absent|both|server|-|-|cmd|ll|absent
+guard-git-present|both|server|git|-|cmd|gst|present
+guard-git-gco|both|server|git|-|cmd|gco|present
+guard-git-glog|both|server|git|-|cmd|glog|present
+guard-eza-present|both|server|eza|-|cmd|ll|present
+guard-eza-la|both|server|eza|-|cmd|la|present
+guard-eza-lt|both|server|eza|-|cmd|lt|present
 # Role gating of the dev layer (topl needs tofu; devbox only)
-role-topl-server|both|server|tofu|cmd|topl|absent
-role-topl-unset|both|unset|tofu|cmd|topl|absent
-role-topl-devbox|both|devbox|tofu|cmd|topl|present
-role-topl-devbox-notool|both|devbox|-|cmd|topl|absent
-role-tfp-devbox|both|devbox|terraform|cmd|tfp|present
-role-tfp-server|both|server|terraform|cmd|tfp|absent
-role-kgp-devbox|both|devbox|kubectl|cmd|kgp|present
-role-dcup-devbox|both|devbox|docker|cmd|dcup|present
-role-dcup-server|both|server|docker|cmd|dcup|absent
+role-topl-server|both|server|tofu|-|cmd|topl|absent
+role-topl-unset|both|unset|tofu|-|cmd|topl|absent
+role-topl-devbox|both|devbox|tofu|-|cmd|topl|present
+role-topl-devbox-notool|both|devbox|-|-|cmd|topl|absent
+role-gst-devbox|both|devbox|git|-|cmd|gst|present
+role-tfp-devbox|both|devbox|terraform|-|cmd|tfp|present
+role-tfp-server|both|server|terraform|-|cmd|tfp|absent
+role-kgp-devbox|both|devbox|kubectl|-|cmd|kgp|present
+role-dcup-devbox|both|devbox|docker|-|cmd|dcup|present
+role-dcup-server|both|server|docker|-|cmd|dcup|absent
+role-kgp-server|both|server|kubectl|-|cmd|kgp|absent
+role-tfp-devbox-notool|both|devbox|-|-|cmd|tfp|absent
+role-kgp-devbox-notool|both|devbox|-|-|cmd|kgp|absent
+role-dcup-devbox-notool|both|devbox|-|-|cmd|dcup|absent
+# The PowerShell dev layer adds Ansible via WSL (no zsh counterpart)
+role-ansible-devbox|pwsh|devbox|-|-|cmd|ansible-playbook|present
+role-ansible-server|pwsh|server|-|-|cmd|ansible-playbook|absent
+role-ansible-unset|pwsh|unset|-|-|cmd|ansible-playbook|absent
 # EDITOR defaults
-editor-devbox|both|devbox|-|env|EDITOR|code --wait
-editor-server|both|server|-|env|EDITOR|nano
-editor-unset|both|unset|-|env|EDITOR|nano
-# Missing tools: silent apart from exactly one hint
-missing-silent-devbox|both|devbox|-|hint|-|1
-missing-silent-server|both|server|-|hint|-|1
+editor-devbox|both|devbox|-|-|env|EDITOR|code --wait
+editor-server|both|server|-|-|env|EDITOR|nano
+editor-unset|both|unset|-|-|env|EDITOR|nano
+# Local override: optional, and its values beat the defaults
+local-none|both|devbox|-|-|cmd|goto|present
+local-wins|both|devbox|-|NowhereEditor=vim|env|EDITOR|vim
+local-empty|both|server|-|empty|env|EDITOR|nano
+# Missing tools: silent apart from exactly one hint; none when nothing is missing
+missing-silent-devbox|both|devbox|-|-|hint|-|1
+missing-silent-server|both|server|-|-|hint|-|1
+complete-no-hint|both|server|core|-|hint|-|0

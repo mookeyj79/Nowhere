@@ -12,9 +12,6 @@
 #        Kind uvtool     Name, Spec             (name==version or name @ source)
 #        Kind module     Name, Version
 #
-#    Test-NowhereUvToolPinned -Spec <spec> -Listed <lines>
-#      does `uv tool list --show-version-specifiers` output show this exact pin?
-#
 #  The Linux plan is bootstrap/lib/plan.sh: same manifest, same spec rule.
 # =============================================================================
 
@@ -40,21 +37,4 @@ function Get-NowherePlan {
             [pscustomobject]@{ Kind = 'module'; Name = $m.name; Version = $m.version }
         }
     }
-}
-
-#   name @ source   a "name v..." line containing " <source>]"
-#   name==version   a "name v<version>" line
-function Test-NowhereUvToolPinned {
-    param(
-        [Parameter(Mandatory)] [string]$Spec,
-        [AllowNull()] [AllowEmptyCollection()] [string[]]$Listed = @()
-    )
-    if ($Spec -like '* @ *') {
-        $name, $source = $Spec -split ' @ ', 2
-        $hits = @($Listed | Where-Object { $_ -match ('^' + [regex]::Escape($name) + ' v') -and $_.Contains(" $source]") })
-    } else {
-        $name, $version = $Spec -split '==', 2
-        $hits = @($Listed | Where-Object { $_ -match ('^' + [regex]::Escape($name) + ' v' + [regex]::Escape($version) + '(\s|$)') })
-    }
-    $hits.Count -gt 0
 }

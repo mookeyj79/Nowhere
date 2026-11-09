@@ -1,17 +1,18 @@
 #Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.5.0' }
 # Cross-shell parity: consumes tests/parity.txt, the same list the zsh runner
-# (tests/zsh/scenarios-parity.sh) consumes. One pwsh session per role+tools group.
+# (tests/zsh/scenarios-parity.sh) consumes (format: the header of parity.txt).
+# One pwsh session per role+tools+local group.
 
 BeforeDiscovery {
     $file = Join-Path $PSScriptRoot '../parity.txt'
     $rows = foreach ($l in Get-Content $file) {
         if ($l -match '^\s*(#|$)') { continue }
-        $f = $l -split '\|', 7
+        $f = $l -split '\|', 8
         if ($f[1] -notin 'both', 'pwsh') { continue }
-        @{ Id = $f[0]; Role = $f[2]; Tools = $f[3]; Check = $f[4]; Arg = $f[5]; Expect = $f[6] }
+        @{ Id = $f[0]; Role = $f[2]; Tools = $f[3]; Local = $f[4]; Check = $f[5]; Arg = $f[6]; Expect = $f[7] }
     }
-    $groups = @($rows | Group-Object { "$($_.Role)|$($_.Tools)" } | ForEach-Object {
-        @{ Role = $_.Group[0].Role; Tools = $_.Group[0].Tools; Rows = @($_.Group) }
+    $groups = @($rows | Group-Object { "$($_.Role)|$($_.Tools)|$($_.Local)" } | ForEach-Object {
+        @{ Role = $_.Group[0].Role; Tools = $_.Group[0].Tools; Local = $_.Group[0].Local; Rows = @($_.Group) }
     })
 }
 
@@ -23,10 +24,12 @@ BeforeAll { . (Join-Path $PSScriptRoot 'Sandbox.ps1') }
 Describe 'scenario index' {
     BeforeAll {
         $script:Index = foreach ($f in @(Join-Path $PSScriptRoot '../scenarios.txt') + @(Get-ChildItem (Join-Path $PSScriptRoot '../zsh') -Filter 'scenarios-*.txt').FullName) {
+            $n = 0
             foreach ($l in Get-Content $f) {
+                $n++
                 if ($l -match '^\s*(#|$)') { continue }
                 $c = $l -split '\|'
-                [pscustomobject]@{ Id = $c[0]; Shells = $c[1]; Pwsh = $c[2] }
+                [pscustomobject]@{ Id = $c[0]; Shells = $c[1]; Pwsh = $c[2]; Fields = $c.Count; Where = "$(Split-Path $f -Leaf):$n" }
             }
         }
         $script:PsFiles = @(Get-ChildItem (Join-Path $PSScriptRoot '../../powershell') -Recurse -Filter '*.ps1').Name
@@ -40,6 +43,16 @@ Describe 'scenario index' {
                 Its    = @([regex]::Matches($text, "(?m)^\s*It '((?:[^']|'')*)'") | ForEach-Object { $_.Groups[1].Value -replace "''", "'" })
             }
         }
+    }
+    It 'every line is a record: id|shells|pwsh|asserts' {
+        $bad = $script:Index | Where-Object {
+            $_.Fields -ne 4 -or $_.Id -notmatch '^[a-z0-9]+(-[a-z0-9]+)*$' -or $_.Shells -notin 'both', 'zsh'
+        } | ForEach-Object Where
+        $bad | Should -BeNullOrEmpty
+    }
+    It 'lists every id once' {
+        $dup = $script:Index | Group-Object Id | Where-Object Count -gt 1 | ForEach-Object Name
+        $dup | Should -BeNullOrEmpty
     }
     It 'every line names a real test, a real pwsh file, or n/a' {
         $bad = foreach ($row in $script:Index) {
@@ -64,7 +77,7 @@ Describe 'scenario index' {
     }
 }
 
-Describe 'parity list (<Role> / <Tools>)' -ForEach $groups {
+Describe 'parity list (<Role> / <Tools> / <Local>)' -ForEach $groups {
     BeforeAll {
         $probe = foreach ($r in $Rows) {
             switch ($r.Check) {
@@ -74,12 +87,24 @@ Describe 'parity list (<Role> / <Tools>)' -ForEach $groups {
                 default { throw "unknown check $($r.Check)" }
             }
         }
-        $p = @{ Probe = ((@($probe) + '"done"') -join '; '); Tools = @(if ($Tools -ne '-') { $Tools -split ',' }) }
+        $toolList = @(switch ($Tools) { '-' { } 'core' { Get-NowhereCoreToolList } default { $Tools -split ',' } })
+        $p = @{ Probe = ((@($probe) + '"done"') -join '; '); Tools = $toolList }
         if ($Role -ne 'unset') { $p.Role = $Role }
+        switch ($Local) {
+            '-' { }
+            'empty' { $p.LocalOverride = '' }
+            default {
+                $p.LocalOverride = @($Local -split ';' | ForEach-Object {
+                    $name, $value = $_ -split '=', 2
+                    "`$$name = '$value'"
+                }) -join "`n"
+            }
+        }
         $session = Invoke-NowhereSession @p
     }
-    It 'starts without errors' {
+    It 'starts cleanly' {
         $session.Errors | Should -BeNullOrEmpty
+        $session.ExitCode | Should -Be 0
     }
     It '<Id>: <Check> <Arg> = <Expect>' -ForEach $Rows {
         if ($Check -eq 'hint') {

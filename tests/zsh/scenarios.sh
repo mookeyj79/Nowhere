@@ -4,79 +4,18 @@
 # list and the pwsh counterparts live in tests/scenarios.txt. A failed assert_*
 # ends the scenario.
 
-# --- profile: role gating ------------------------------------------------------
-scenario_role_devbox() {
-    reset_session; SESSION_TOOLS="git tofu"
-    session devbox 'echo "core=${+aliases[gst]}"; echo "dev=${+aliases[topl]}"; echo "editor=$EDITOR"'
-    assert_empty "$ERR"; assert_line "$OUT" core=1; assert_line "$OUT" dev=1; assert_line "$OUT" 'editor=code --wait'
-}
-scenario_role_server() {
-    reset_session; SESSION_TOOLS="git tofu"
-    session server 'echo "core=${+aliases[gst]}"; echo "dev=${+aliases[topl]}"; echo "editor=$EDITOR"'
-    assert_empty "$ERR"; assert_line "$OUT" core=1; assert_line "$OUT" dev=0; assert_line "$OUT" editor=nano
-}
-scenario_role_unset() {
-    reset_session; SESSION_TOOLS="git tofu"
-    session '' 'echo "dev=${+aliases[topl]}"'
-    assert_line "$OUT" dev=0
-}
+# Role gating, the local override, tool guards and the missing-tools hint are
+# rows of tests/parity.txt (scenario_parity), shared with Pester.
 
 # --- profile: local override -----------------------------------------------------
-scenario_local_none() {
-    reset_session; SESSION_TOOLS="git"
-    session devbox 'echo "home=$NOWHERE_HOME"'
-    assert_empty "$ERR"; assert_eq "$CODE" 0
-    assert_line "$OUT" "home=$REPO_ROOT"
-}
-scenario_local_wins() {
-    reset_session; SESSION_TOOLS="git"
-    SESSION_LOCAL='NowhereEditor=vim'
-    session devbox 'echo "editor=$EDITOR"'
-    assert_empty "$ERR"; assert_line "$OUT" editor=vim
-}
 scenario_local_nowhere_home() {
     reset_session; SESSION_TOOLS="git"
     SESSION_LOCAL='export NOWHERE_HOME=/custom/clone'
     session server 'echo "home=$NOWHERE_HOME"'
     assert_line "$OUT" home=/custom/clone
-}
-scenario_local_empty() {
-    reset_session; SESSION_TOOLS="git"; SESSION_LOCAL=''
-    session server 'echo "editor=$EDITOR"'
-    assert_empty "$ERR"; assert_line "$OUT" editor=nano
-}
-
-# --- profile: contract -----------------------------------------------------------
-scenario_tool_guard_git() {
     reset_session; SESSION_TOOLS="git"
-    session server 'echo "gst=${+aliases[gst]}"'
-    assert_line "$OUT" gst=1
-    reset_session; SESSION_TOOLS=""
-    session server 'echo "gst=${+aliases[gst]}"'
-    assert_line "$OUT" gst=0; assert_empty "$ERR"
-}
-scenario_dev_aliases_guarded() {
-    local probe='echo "tfp=${+aliases[tfp]}"; echo "kgp=${+aliases[kgp]}"; echo "dcup=${+aliases[dcup]}"; echo "topl=${+aliases[topl]}"'
-    reset_session; SESSION_TOOLS=""
-    session devbox "$probe"
-    assert_empty "$ERR"; assert_line "$OUT" tfp=0; assert_line "$OUT" kgp=0; assert_line "$OUT" dcup=0
-    reset_session; SESSION_TOOLS="terraform kubectl docker tofu"
-    session devbox "$probe"
-    assert_line "$OUT" tfp=1; assert_line "$OUT" kgp=1; assert_line "$OUT" dcup=1; assert_line "$OUT" topl=1
-    session server "$probe"
-    assert_line "$OUT" tfp=0; assert_line "$OUT" topl=0
-}
-scenario_missing_tools_hint() {
-    reset_session; SESSION_TOOLS=""
-    session devbox 'echo ok'
-    assert_empty "$ERR"; assert_line "$OUT" ok
-    assert_eq "$(count_matching "$OUT" bootstrap)" 1 'hint count'
-}
-scenario_no_hint_when_complete() {
-    reset_session; SESSION_TOOLS="$CORE_TOOLS"
-    SESSION_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:C zsh-history-substring-search:zsh-history-substring-search.zsh:D catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:A zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:B"
-    session server 'echo ok'
-    assert_eq "$(count_matching "$OUT" bootstrap)" 0 'hint count'
+    session server 'echo "home=$NOWHERE_HOME"'
+    assert_line "$OUT" "home=$REPO_ROOT"
 }
 
 # --- profile: plugin directory convention ----------------------------------------

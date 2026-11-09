@@ -1,7 +1,7 @@
 # =============================================================================
 #  00-environment.zsh
-#  Env vars, tool/plugin presence helpers and the one-per-session hint. Runs
-#  first so every later file sees them.
+#  Env vars, tool/plugin presence helpers, the cached-init helper and the
+#  one-per-session hint. Runs first so every later file sees them.
 #
 #  The profile never installs anything: a missing tool or plugin is skipped
 #  silently and profile.zsh prints at most one "run bootstrap" hint per session.
@@ -38,6 +38,28 @@ nowhere_hint_flush() {
         NowhereHintShown=1
         print -r -- "nowhere: some tools or plugins are missing; run bootstrap to install them."
     fi
+}
+
+# --- Cached init ------------------------------------------------------------------
+#  nowhere_cached_init <name> <tool> [args...]  source a cached copy of what
+#  `<tool> [args...]` prints (an init or completion script), so a warm start
+#  spawns nothing. The same rules as Get-NowhereCachedInit in 00-environment.ps1:
+#    - the cache is $NOWHERE_CACHE_DIR/<name>.zsh
+#    - it is fresh while it is newer than the tool's binary, else regenerated
+#    - empty output is cached too, so it is not regenerated on every start
+#    - an absent tool, a failing generator or an unwritable cache directory
+#      sources nothing and prints nothing
+nowhere_cached_init() {
+    local bin=$commands[$2] file=$NOWHERE_CACHE_DIR/$1.zsh out
+    shift 2
+    [[ -n $bin ]] || return 0
+    if [[ ! -e $file || ! $file -nt $bin ]]; then
+        out=$($bin "$@" 2> /dev/null) || return 0
+        [[ -d $NOWHERE_CACHE_DIR ]] || mkdir -p -- $NOWHERE_CACHE_DIR 2> /dev/null || return 0
+        { print -r -- $out >| $file } 2> /dev/null || return 0
+    fi
+    source $file
+    return 0
 }
 
 # --- Editor ---------------------------------------------------------------------------

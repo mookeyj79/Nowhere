@@ -2,38 +2,10 @@
 
 BeforeAll { . (Join-Path $PSScriptRoot 'Sandbox.ps1') }
 
-Describe 'tool-guarded aliases' {
-    It 'core git aliases exist only when git is on PATH' {
-        $with = Invoke-NowhereSession -Role server -Tools git -Probe '"gst=" + [bool](Get-Command gst -EA 0)'
-        $without = Invoke-NowhereSession -Role server -Tools @() -Probe '"gst=" + [bool](Get-Command gst -EA 0)'
-        $with.Output | Should -Contain 'gst=True'
-        $without.Output | Should -Contain 'gst=False'
-        $without.Errors | Should -BeNullOrEmpty
-    }
-    It 'eza aliases exist only when eza is on PATH' {
-        $p = '"ll=" + [bool](Get-Command ll -EA 0)'
-        (Invoke-NowhereSession -Role server -Tools eza -Probe $p).Output | Should -Contain 'll=True'
-    }
-}
+# Tool guards, dev-layer role gating and the missing-tools hint are rows of
+# tests/parity.txt, run by Parity.Tests.ps1.
 
 Describe 'dev alias layer' {
-    It 'devbox with tofu gets topl; server does not' {
-        $p = '"topl=" + [bool](Get-Command topl -EA 0)'
-        (Invoke-NowhereSession -Role devbox -Tools tofu -Probe $p).Output | Should -Contain 'topl=True'
-        (Invoke-NowhereSession -Role server -Tools tofu -Probe $p).Output | Should -Contain 'topl=False'
-    }
-    It 'terraform/kubectl/docker aliases are guarded by their tool' {
-        $p = '"tfp=" + [bool](Get-Command tfp -EA 0); "kgp=" + [bool](Get-Command kgp -EA 0); "dcup=" + [bool](Get-Command dcup -EA 0)'
-        $none = Invoke-NowhereSession -Role devbox -Tools @() -Probe $p
-        $none.Output | Should -Contain 'tfp=False'
-        $none.Output | Should -Contain 'kgp=False'
-        $none.Output | Should -Contain 'dcup=False'
-        $none.Errors | Should -BeNullOrEmpty
-        $all = Invoke-NowhereSession -Role devbox -Tools terraform, kubectl, docker -Probe $p
-        $all.Output | Should -Contain 'tfp=True'
-        $all.Output | Should -Contain 'kgp=True'
-        $all.Output | Should -Contain 'dcup=True'
-    }
     It 'kns switches namespace through kubectl, mapping d to default' {
         $r = Invoke-NowhereSession -Role devbox -Tools kubectl -Probe 'kns d'
         ($r.Output -join ' ') | Should -Match 'namespace=default'
@@ -92,6 +64,28 @@ $null = Get-NowhereCachedInit starship-init starship @('init', 'powershell'); "n
         $r.Output | Should -Contain "old-bin='warm'"
         $r.Output | Should -Contain 'new-bin=starship init powershell'
     }
+    It 'a failing generator caches nothing; empty output is cached' {
+        $probe = @'
+$d = Join-Path $HOME 'gen'; $null = New-Item -ItemType Directory $d
+if ($IsWindows) {
+    Set-Content (Join-Path $d 'broken.cmd') '@echo $global:Broken = 1& @exit /b 1'
+    Set-Content (Join-Path $d 'quiet.cmd') '@exit /b 0'
+} else {
+    Set-Content (Join-Path $d 'broken') "#!/bin/sh`necho '`$global:Broken = 1'`nexit 1"
+    Set-Content (Join-Path $d 'quiet') "#!/bin/sh`nexit 0"
+    foreach ($f in 'broken', 'quiet') { [IO.File]::SetUnixFileMode((Join-Path $d $f), 'UserRead, UserWrite, UserExecute') }
+}
+$env:PATH = $d + [IO.Path]::PathSeparator + $env:PATH
+"broken=[" + (Get-NowhereCachedInit broken-init broken) + "]"
+"broken-cached=" + (Test-Path (Join-Path $global:NowhereCacheDir 'broken-init.ps1'))
+"quiet-cached=" + [bool](Get-NowhereCachedInit quiet-init quiet)
+'@
+        $r = Invoke-NowhereSession -Role server -Probe $probe
+        $r.Errors | Should -BeNullOrEmpty
+        $r.Output | Should -Contain 'broken=[]'
+        $r.Output | Should -Contain 'broken-cached=False'
+        $r.Output | Should -Contain 'quiet-cached=True'
+    }
     It 'an absent tool gives no script and no error' {
         $r = Invoke-NowhereSession -Role server -Probe '"r=[" + (Get-NowhereCachedInit zoxide-init zoxide @(''init'')) + "]"'
         $r.Errors | Should -BeNullOrEmpty
@@ -100,16 +94,6 @@ $null = Get-NowhereCachedInit starship-init starship @('init', 'powershell'); "n
 }
 
 Describe 'missing tools' {
-    It 'starts silently apart from one run-bootstrap hint' {
-        $r = Invoke-NowhereSession -Role devbox -Tools @() -Probe '"ok"'
-        $r.Errors | Should -BeNullOrEmpty
-        $r.Output | Should -Contain 'ok'
-        @($r.Output | Where-Object { $_ -match 'bootstrap' }).Count | Should -Be 1
-    }
-    It 'prints no hint when nothing is missing' {
-        $r = Invoke-NowhereSession -Role server -Tools (Get-NowhereCoreToolList) -Probe '"ok"'
-        @($r.Output | Where-Object { $_ -match 'bootstrap' }).Count | Should -Be 0
-    }
     It 'every core tool in shared/core-tools.txt is a core tool in the manifest' {
         $core = ((Get-Content (Join-Path $script:RepoRoot 'shared/tools.json') -Raw | ConvertFrom-Json).tools |
             Where-Object layer -eq 'core').name

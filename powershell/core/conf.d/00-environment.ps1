@@ -18,9 +18,11 @@ function Test-NowhereTool {
 # Get-NowhereCachedInit <name> <tool> [args...]: the path of a cached copy of
 # `<tool> [args...]` output (an init or completion script), regenerated only
 # when the tool's binary is newer than the cache, so a warm start spawns
-# nothing. $null when the tool is absent or the generation fails. The caller
+# nothing. Empty output is cached too. $null when the tool is absent or the
+# generator fails (non-zero exit or an error). The caller
 # dot-sources the path, so what the script defines lands in the caller's scope.
-# zsh's counterpart is _nowhere_cached_init in 50-init.zsh.
+# zsh's counterpart, with the same rules, is nowhere_cached_init in
+# 00-environment.zsh.
 function Get-NowhereCachedInit {
     param(
         [Parameter(Mandatory)] [string]$Name,
@@ -40,6 +42,7 @@ function Get-NowhereCachedInit {
     if (-not $fresh) {
         try {
             $out = & $bin.Source @Arguments 2>$null
+            if ($LASTEXITCODE) { return }    # a failing generator caches nothing
             $null = [IO.Directory]::CreateDirectory($global:NowhereCacheDir)
             [IO.File]::WriteAllText($file, ($out -join "`n"), [Text.UTF8Encoding]::new($false))
         } catch {
