@@ -10,6 +10,8 @@
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 ZSH_BIN=$(command -v zsh || true)
+# shared/core-tools.txt as a space list: SESSION_TOOLS for "every core tool present"
+CORE_TOOLS=$(grep -v '^#' "$REPO_ROOT/shared/core-tools.txt" | tr '\n' ' ')
 SANDBOXES=()
 
 cleanup_sandboxes() {
@@ -46,29 +48,44 @@ count_matching() { printf '%s\n' "$1" | grep -c -- "$2" || true; }
 ZSH_SANDBOX_PRELUDE='compinit() { unfunction compinit; autoload -Uz compinit; compinit -u "$@" }'
 
 # --- zsh session sandbox --------------------------------------------------------
-# Inputs (globals, reset by reset_session): SESSION_LOCAL (override text, unset =
-# no file), SESSION_TOOLS (shim names; unset = a PATH with no tools at all),
-# SESSION_PLUGINS (stub plugins), SESSION_FZF_ZSH (what the fzf shim prints for --zsh).
-# Outputs: OUT (stdout), ERR (stderr), CODE.
-reset_session() { unset SESSION_LOCAL SESSION_TOOLS SESSION_PLUGINS SESSION_FZF_ZSH SESSION_REAL; }
+# session <role> [probe]  a real zsh, `zsh -f`, through a stub that sets the role
+# (empty = unset) and sources the profile, then runs probe. PATH is the sandbox
+# bin only: nothing from the host unless asked for.
+# Inputs (globals, cleared by reset_session; a scenario runs in its own subshell,
+# so they never leak into the next scenario):
+#   SESSION_TOOLS    tool names to shim; unset = no tools at all
+#   SESSION_SHIM     function writing each shim: <fn> <path> <tool> <sandbox>;
+#                    default: a shim that echoes its name and arguments
+#   SESSION_REAL     host binaries (mkdir, touch...) linked into the bin
+#   SESSION_LOCAL    local override text; unset = no override file
+#   SESSION_PLUGINS  stub plugins, name:relative/file:VAR (the file sets VAR=1)
+#   SESSION_FZF_ZSH  what the fzf shim prints for --zsh
+#   SESSION_REUSE    a sandbox from an earlier call to run in again (caches,
+#                    existing shims kept as they are)
+# Outputs: OUT (stdout), ERR (stderr), CODE, SESSION_SB (the sandbox used).
+reset_session() { unset SESSION_LOCAL SESSION_TOOLS SESSION_SHIM SESSION_PLUGINS SESSION_FZF_ZSH SESSION_REAL SESSION_REUSE; }
+
+session_echo_shim() { printf '#!/bin/sh\necho %s "$@"\n' "$2" > "$1"; }
 
 session() {
     local role=$1 probe=${2:-:}
     local sb home bin
-    sb=$(new_dir); home=$sb/home; bin=$sb/bin
+    sb=${SESSION_REUSE:-$(new_dir)}; home=$sb/home; bin=$sb/bin
+    SESSION_SB=$sb
     mkdir -p "$home/.config/nowhere" "$bin" "$sb/xdg"
     if [ "${SESSION_LOCAL+set}" = set ]; then printf '%s\n' "$SESSION_LOCAL" > "$home/.config/nowhere/local.zsh"; fi
     local t
     for t in ${SESSION_TOOLS:-}; do
-        printf '#!/bin/sh\necho %s "$@"\n' "$t" > "$bin/$t"
+        [ -e "$bin/$t" ] && continue
+        "${SESSION_SHIM:-session_echo_shim}" "$bin/$t" "$t" "$sb"
         chmod +x "$bin/$t"
     done
     if [ "${SESSION_FZF_ZSH+set}" = set ] && [ -x "$bin/fzf" ]; then
         printf '#!/bin/sh\n[ "$1" = --zsh ] && while IFS= read -r l; do printf "%%s\\n" "$l"; done < "%s/fzf-zsh.txt"\n' "$sb" > "$bin/fzf"
         printf '%s\n' "$SESSION_FZF_ZSH" > "$sb/fzf-zsh.txt"
     fi
-    for t in ${SESSION_REAL:-}; do   # real binaries (mkdir, cat...) linked into the bin
-        ln -s "$(command -v "$t")" "$bin/$t"
+    for t in ${SESSION_REAL:-}; do
+        ln -sf "$(command -v "$t")" "$bin/$t"
     done
     if [ "${SESSION_PLUGINS+set}" = set ]; then
         local spec name file body
@@ -152,19 +169,22 @@ EOF
     BS_UVTOOL_DIR=$BS_ROOT/opt-uv-tools; BS_UVTOOL_BIN=$BS_ROOT/usr-local-bin
     chmod +x "$BS_BIN/dpkg" "$BS_BIN/apt-get" "$BS_BIN/sudo" "$BS_BIN/curl" "$BS_BIN/uv.fake"
 
-    # A fake release archive per manifest 'release' tool, in the manifest's own
-    # archive format, holding the member path (for both arch spellings) that
+    # A fake release archive per planned release tool, in its planned archive
+    # format, holding the member path the plan resolves for each arch, which
     # prints "<name> <pinned version>" for any arguments.
-    local rname rver rarch rmember rfmt m
-    mkdir -p "$BS_BIN/rel"
-    while IFS=$'\t' read -r rname rver rfmt rmember; do
-        mkdir -p "$BS_ROOT/arsrc/$rname"
-        for rarch in $(jq -r --arg n "$rname" '.tools[] | select(.name == $n) | (.release.arch // {x64: "x64", arm64: "arm64"}) | .[]' "$REPO_ROOT/shared/tools.json"); do
-            m=${rmember//\{version\}/$rver}; m=${m//\{arch\}/$rarch}
+    local kind rname rver rurl rsum rfmt m rarch
+    mkdir -p "$BS_BIN/rel" "$BS_ROOT/arsrc"
+    for rarch in x64 arm64; do
+        while IFS=$'\t' read -r kind rname rver rurl rsum rfmt m _; do
+            [ "$kind" = release ] || continue
             mkdir -p "$BS_ROOT/arsrc/$rname/$(dirname "$m")"
             printf '#!/bin/sh\necho %s %s\n' "$rname" "$rver" > "$BS_ROOT/arsrc/$rname/$m"
             chmod +x "$BS_ROOT/arsrc/$rname/$m"
-        done
+            echo "$rfmt" > "$BS_ROOT/arsrc/$rname.format"
+        done < <(bash "$REPO_ROOT/bootstrap/lib/plan.sh" devbox --arch "$rarch")
+    done
+    for m in "$BS_ROOT"/arsrc/*.format; do
+        rname=$(basename "$m" .format); rfmt=$(cat "$m")
         if [ "$rfmt" = zip ]; then
             (cd "$BS_ROOT/arsrc/$rname" && python3 -c 'import sys, zipfile, os
 z = zipfile.ZipFile(sys.argv[1], "w")
@@ -176,7 +196,7 @@ for d, _, fs in os.walk("."):
             (cd "$BS_ROOT/arsrc/$rname" && find . -type f -printf '%P\n' | tar -czf "$BS_BIN/rel/$rname" -T -)
         fi
         BS_FAKE_SHAS+=("$rname=$(sha256sum "$BS_BIN/rel/$rname" | cut -d' ' -f1)")
-    done < <(jq -r '.tools[] | select(.release) | [.name, .release.version, (.release.archive // "tar.gz"), (.release.member // .name)] | @tsv' "$REPO_ROOT/shared/tools.json")
+    done
 
     # A minimal clone: the real bootstrap, manifests and example, in a fresh git repo.
     local p
@@ -208,13 +228,19 @@ for d, _, fs in os.walk("."):
     git -C "$BS_CLONE" init -q
 }
 
-# Run bootstrap in the sandbox. Sets BS_OUT and BS_CODE.
-run_bootstrap() {
+# bs_run <script in the clone> [args...]  run a clone script in the sandbox with
+# the fakes first on PATH and the root-owned paths moved under BS_ROOT. The
+# script sees NOWHERE_ROLE=$BS_ROLE (default server), as the stub would set it.
+# Sets BS_OUT (stdout and stderr together) and BS_CODE.
+bs_run() {
+    local script=$1; shift
     BS_CODE=0
     BS_OUT=$(env -i HOME="$BS_HOME" PATH="$BS_BIN:/usr/bin:/bin" FAKE_BIN="$BS_BIN" GIT_CONFIG_NOSYSTEM=1 \
+        NOWHERE_ROLE="${BS_ROLE:-server}" \
         NOWHERE_MOTD_DIR="$BS_MOTD_DIR" NOWHERE_MOTD_CONFIG_DIR="$BS_MOTD_CONF" \
         NOWHERE_UVTOOL_DIR="$BS_UVTOOL_DIR" NOWHERE_UVTOOL_BIN_DIR="$BS_UVTOOL_BIN" \
-        bash "$BS_CLONE/bootstrap/bootstrap.sh" "$@" 2>&1) || BS_CODE=$?
+        bash "$BS_CLONE/$script" "$@" 2>&1) || BS_CODE=$?
 }
+run_bootstrap() { bs_run bootstrap/bootstrap.sh "$@"; }
 
 bs_log() { cat "$BS_BIN/$1" 2> /dev/null || true; }

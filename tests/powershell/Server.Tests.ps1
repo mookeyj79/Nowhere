@@ -1,4 +1,4 @@
-#Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.0.0' }
+#Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.5.0' }
 
 BeforeAll {
     . (Join-Path $PSScriptRoot 'Bootstrap.Sandbox.ps1')
@@ -166,14 +166,6 @@ Describe 'Test-NowhereInteractiveSession' -ForEach @(@{ Cases = $script:SessionC
     }
     It 'treats redirected output as non-interactive' {
         $script:Results['redirected'] | Should -BeFalse
-    }
-}
-
-Describe 'Update-System on a server' {
-    It 'is role-aware and guards winget' {
-        $text = Get-Content (Join-Path $script:RepoRoot 'powershell/core/bin/Update-System.ps1') -Raw
-        $text | Should -Match 'NowhereRole'
-        $text | Should -Match 'Get-Command winget'
     }
 }
 

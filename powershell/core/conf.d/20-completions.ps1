@@ -12,74 +12,26 @@
 #  when a binary is updated.
 # =============================================================================
 
-$script:CompletionCacheDir = $global:NowhereCacheDir
-$null = [System.IO.Directory]::CreateDirectory($script:CompletionCacheDir)
-
-# --- Generic cached completer helper ----------------------------------------
-function Register-CachedCompletion {
-    param(
-        [Parameter(Mandatory)] [string]   $Command,
-        [Parameter(Mandatory)] [string[]] $CompletionArgs
-    )
-    $bin = Get-Command $Command -ErrorAction SilentlyContinue
-    if (-not $bin) { return }
-
-    $cacheFile  = Join-Path $script:CompletionCacheDir "$Command-completion.ps1"
-    $needsRegen = $true
-
-    if (Test-Path $cacheFile) {
-        try {
-            $binTime   = (Get-Item -LiteralPath $bin.Source -ErrorAction Stop).LastWriteTimeUtc
-            $cacheTime = (Get-Item -LiteralPath $cacheFile  -ErrorAction Stop).LastWriteTimeUtc
-            if ($cacheTime -gt $binTime) { $needsRegen = $false }
-        } catch { }
-    }
-
-    if ($needsRegen) {
-        try {
-            $output = & $Command @CompletionArgs 2>$null
-            [System.IO.File]::WriteAllText(
-                $cacheFile,
-                ($output -join "`n"),
-                [System.Text.Encoding]::UTF8
-            )
-        } catch {
-            Write-Verbose "Failed to generate completion for ${Command}: $_"
-            return
-        }
-    }
-
-    try { . $cacheFile }
-    catch { Write-Verbose "Failed to load completion for ${Command}: $_" }
-}
-
 # --- Tier 1: Carapace (covers git and the long tail of CLIs) ----------------
-$_carapace = Get-Command carapace -ErrorAction SilentlyContinue
-if ($_carapace) {
-    $cacheFile  = Join-Path $script:CompletionCacheDir 'carapace-init.ps1'
-    $needsRegen = $true
-    if (Test-Path $cacheFile) {
-        try {
-            $binTime   = (Get-Item -LiteralPath $_carapace.Source -ErrorAction Stop).LastWriteTimeUtc
-            $cacheTime = (Get-Item -LiteralPath $cacheFile        -ErrorAction Stop).LastWriteTimeUtc
-            if ($cacheTime -gt $binTime) { $needsRegen = $false }
-        } catch { }
-    }
-    if ($needsRegen) {
-        carapace _carapace | Set-Content -Path $cacheFile -Encoding UTF8
-    }
-    . $cacheFile
-}
-Remove-Variable _carapace
+$_completion = Get-NowhereCachedInit carapace-init carapace @('_carapace')
+if ($_completion) { . $_completion }
 
 # --- Tier 2: Native completers (override Carapace for these tools) ----------
-Register-CachedCompletion 'kubectl' @('completion', 'powershell')
-Register-CachedCompletion 'helm'    @('completion', 'powershell')
-Register-CachedCompletion 'gh'      @('completion', '-s', 'powershell')
-Register-CachedCompletion 'docker'  @('completion', 'powershell')
+#  Get-NowhereCachedInit (00-environment) caches each by binary mtime.
+foreach ($_native in @(
+        @('kubectl', 'completion', 'powershell'),
+        @('helm', 'completion', 'powershell'),
+        @('gh', 'completion', '-s', 'powershell'),
+        @('docker', 'completion', 'powershell'))) {
+    $_completion = Get-NowhereCachedInit "$($_native[0])-completion" $_native[0] $_native[1..($_native.Count - 1)]
+    if ($_completion) {
+        try { . $_completion } catch { Write-Verbose "Failed to load completion for $($_native[0]): $_" }
+    }
+}
+Remove-Variable _completion, _native -ErrorAction SilentlyContinue
 
 # --- Tier 3: Live callbacks (run in-process on Tab; no startup cost) --------
-if (Get-Command winget -ErrorAction SilentlyContinue) {
+if (Test-NowhereTool winget) {
     Register-ArgumentCompleter -Native -CommandName winget -ScriptBlock {
         param($wordToComplete, $commandAst, $cursorPosition)
         [Console]::InputEncoding = [Console]::OutputEncoding =
@@ -93,7 +45,7 @@ if (Get-Command winget -ErrorAction SilentlyContinue) {
     }
 }
 
-if (Get-Command aws -ErrorAction SilentlyContinue) {
+if (Test-NowhereTool aws) {
     Register-ArgumentCompleter -Native -CommandName aws -ScriptBlock {
         param($wordToComplete, $commandAst, $cursorPosition)
         $env:COMP_LINE  = $commandAst.ToString()

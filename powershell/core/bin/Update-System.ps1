@@ -7,17 +7,14 @@ param(
     [switch]$Tools
 )
 
-$All = -not ($Windows -or $Winget -or $WSL -or $DiskCleanup -or $Tools)
+# The step choice, winget table parsing and the Tools step live in
+# ../lib/UpdateSystem.ps1, where tests reach them without admin rights.
+. (Join-Path $PSScriptRoot '../lib/UpdateSystem.ps1')
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
+$Role = if ($global:NowhereRole) { $global:NowhereRole } elseif ($env:NOWHERE_ROLE -eq 'devbox') { 'devbox' } else { 'server' }
 
-# On a server (role set by the Nowhere profile) a bare `update` means Windows
-# Update plus winget when it exists. WSL is not a server feature and cleanmgr
-# is absent without Desktop Experience; both stay available as explicit flags.
-if ($All -and $global:NowhereRole -eq 'server') {
-    $All = $false
-    $Windows = $true
-    $Tools = $true
-    $Winget = [bool](Get-Command winget -ErrorAction SilentlyContinue)
-}
+$requested = @($PSBoundParameters.Keys | Where-Object { $PSBoundParameters[$_] })
+$steps = Resolve-UpdateSteps -Role $Role -Requested $requested -HaveWinget ([bool](Get-Command winget -ErrorAction SilentlyContinue))
 
 # Self-updating apps winget should never touch. Pinned automatically if installed.
 # Override without editing: set WINGET_PIN_IDS to a comma-separated list of winget IDs.
@@ -29,64 +26,26 @@ $PinIds = if ($env:WINGET_PIN_IDS) { $env:WINGET_PIN_IDS -split '[,;\s]+' | Wher
 # Upgrades one winget source package by package, printing each app as it is processed:
 #   [*] AppName
 #       [!] Error - <reason>        (only when that app fails)
-# winget has no JSON output for `upgrade`, so the candidate table is parsed by column
-# position (names and IDs can contain spaces). Output is captured per app so a failure
-# is reported right under its own app instead of at the end.
+# Output is captured per app so a failure is reported right under its own app
+# instead of at the end.
 function Update-WingetSource {
     param([Parameter(Mandatory)][string]$Source)
-
-    # winget redraws its spinner with carriage returns; keep only the final redraw.
-    $clean = { param($t) ($t -split "`r")[-1].Trim() }
-
-    $raw = winget upgrade --source $Source --include-unknown --accept-source-agreements --disable-interactivity 2>$null |
-        ForEach-Object { & $clean "$_" }
-    $hdr = $raw | Where-Object { $_ -match '^Name\s+Id\s+Version\s+Available' } | Select-Object -First 1
-    if (-not $hdr) { return }
-
-    $idCol  = $hdr.IndexOf('Id')
-    $verCol = $hdr.IndexOf('Version')
-    $avlCol = $hdr.IndexOf('Available')
-    $slice  = {
-        param($l, $from, $to)
-        if ($l.Length -le $from) { return '' }
-        $l.Substring($from, [Math]::Min($to, $l.Length) - $from).Trim()
-    }
-
-    $inTable = $false
-    foreach ($line in $raw) {
-        if ($line -eq $hdr) { $inTable = $true; continue }
-        if (-not $inTable -or $line -match '^-+$' -or -not $line) { continue }
-        if ($line -match '^\d+ upgrades? available' -or $line -match 'have pins that prevent upgrade') { break }
-
-        $name = & $slice $line 0 $idCol
-        $id   = & $slice $line $idCol $verCol
+    $table = winget upgrade --source $Source --include-unknown --accept-source-agreements --disable-interactivity 2>$null
+    foreach ($pkg in @(ConvertFrom-WingetUpgradeTable -Lines $table)) {
         Write-Host -ForegroundColor Green -NoNewline "[*]"
-        Write-Host " $name"
-
-        $out = winget upgrade --id $id --source $Source --include-unknown `
+        Write-Host " $($pkg.Name)"
+        $out = winget upgrade --id $pkg.Id --source $Source --include-unknown `
             --accept-source-agreements --accept-package-agreements --silent --disable-interactivity 2>&1 |
-            ForEach-Object { & $clean "$_" } | Where-Object { $_ }
-        $code = $LASTEXITCODE
-
-        # -1978335189 = "no applicable upgrade": the --include-unknown version mismatch
-        # noise (e.g. Ubisoft Connect). Not a failure.
-        if ($code -eq 0 -or $code -eq -1978335189) { continue }
-
-        # The reason starts at the first error-looking line; take it plus up to two
-        # following lines and fold them into one (e.g. "An unexpected error occurred...
-        # Download request status is not success. 0x80190193 : Forbidden (403).").
-        [string[]]$lines = $out
-        $first = [array]::FindIndex($lines, [Predicate[string]]{ param($l) $l -match 'fail|error|forbidden|0x[0-9a-f]{8}' })
-        $reason = if ($first -ge 0) {
-            $lines[$first..([Math]::Min($first + 2, $lines.Count - 1))] -join ' '
-        } else { "exit code $code" }
-
-        Write-Host -ForegroundColor Red -NoNewline "    [!]"
-        Write-Host " Error - $reason"
+            ForEach-Object { "$_" }
+        $reason = Get-WingetFailureReason -Lines $out -ExitCode $LASTEXITCODE
+        if ($reason) {
+            Write-Host -ForegroundColor Red -NoNewline "    [!]"
+            Write-Host " Error - $reason"
+        }
     }
 }
 
-if ($Windows -or $All) {
+if ('Windows' -in $steps) {
     Write-Host -ForegroundColor Green -NoNewline "[*]"
     Write-Host " Updating Windows..."
     if (-not (Get-Module -ListAvailable PSWindowsUpdate)) {
@@ -103,7 +62,7 @@ if ($Windows -or $All) {
     Write-Host -NoNewline "`n"
 }
 
-if ($Winget -or $All) {
+if ('Winget' -in $steps) {
     Write-Host -ForegroundColor Green -NoNewline "[*]"
     Write-Host " Updating Applications..."
 
@@ -141,18 +100,14 @@ if ($Winget -or $All) {
     Write-Host -NoNewline "`n"
 }
 
-if ($Tools -or $All) {
+if ('Tools' -in $steps) {
     Write-Host -ForegroundColor Green -NoNewline "[*]"
-    Write-Host " Updating uv and pinned modules..."
-    if (Get-Command Update-Uv -ErrorAction SilentlyContinue) {
-        Update-Uv
-        Update-PinnedModules
-    }
-    else { Write-Warning "Update-Uv not loaded (run from a Nowhere profile session)" }
+    Write-Host " Updating uv and pinned tools..."
+    Invoke-NowhereToolsUpdate -Role $Role -RepoRoot $RepoRoot
     Write-Host -NoNewline "`n"
 }
 
-if ($WSL -or $All) {
+if ('WSL' -in $steps) {
     Write-Host -ForegroundColor Green -NoNewline "[*]"
     Write-Host " Updating WSL..."
     wsl --update
@@ -160,7 +115,7 @@ if ($WSL -or $All) {
     Write-Host -NoNewline "`n"
 }
 
-if ($DiskCleanup -or $All) {
+if ('DiskCleanup' -in $steps) {
     Write-Host -ForegroundColor Green -NoNewline "[*]"
     Write-Host " Cleaning Disk..."
     $sageId    = 99

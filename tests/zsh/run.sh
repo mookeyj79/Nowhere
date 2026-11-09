@@ -12,7 +12,11 @@ for extra in "$here"/scenarios-*.sh; do
     # shellcheck source=/dev/null
     . "$extra"
 done
-trap cleanup_sandboxes EXIT
+# Sandboxes are made inside scenario subshells, so SANDBOXES cannot track them;
+# a per-run TMPDIR holds them all and goes at exit.
+TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/nowhere-run.XXXXXX")
+export TMPDIR
+trap 'cleanup_sandboxes; rm -rf "$TMPDIR"' EXIT
 
 [ -n "$ZSH_BIN" ] || { echo "zsh not found on PATH" >&2; exit 2; }
 command -v jq > /dev/null || { echo "jq not found on PATH" >&2; exit 2; }

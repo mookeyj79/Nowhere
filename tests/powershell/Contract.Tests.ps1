@@ -1,4 +1,4 @@
-#Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.0.0' }
+#Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.5.0' }
 
 BeforeAll { . (Join-Path $PSScriptRoot 'Sandbox.ps1') }
 
@@ -45,39 +45,15 @@ Describe 'update' {
         $r = Invoke-NowhereSession -Role server -Probe '(Get-Alias update).ResolvedCommand.Name'
         $r.Output | Should -Contain 'Update-System'
     }
-    It 'Update-Uv runs uv self update when uv exists' {
-        $r = Invoke-NowhereSession -Role server -Tools uv -Probe 'Update-Uv'
-        $r.Errors | Should -BeNullOrEmpty
-        ($r.Output -join ' ') | Should -Match 'uv self update'
-    }
-    It 'Update-Uv skips quietly when uv is absent' {
-        $r = Invoke-NowhereSession -Role server -Tools @() -Probe 'Update-Uv'
-        $r.Errors | Should -BeNullOrEmpty
-        ($r.Output -join ' ') | Should -Match 'uv not found'
-    }
-    It 'Update-PinnedModules installs exactly the pinned versions, never floating' {
-        $probe = 'function Get-Module { }; function Install-Module { "INSTALL $($args -join '' '')" }; Update-PinnedModules'
-        $r = Invoke-NowhereSession -Role server -Probe $probe
+    It 'Update-PSProfile brings modules to their pins and never runs winget' {
+        $probe = 'function Get-Module { }; function Install-Module { "INSTALL $($args -join '' '')" }; Update-PSProfile'
+        $r = Invoke-NowhereSession -Role devbox -Tools winget -Probe $probe
         $r.Errors | Should -BeNullOrEmpty
         $pins = (Get-Content (Join-Path $script:RepoRoot 'powershell/modules.json') -Raw | ConvertFrom-Json).modules
         foreach ($m in $pins) {
             ($r.Output -join "`n") | Should -Match "INSTALL -Name $($m.name) -RequiredVersion $([regex]::Escape($m.version))"
         }
-    }
-    It 'Update-PinnedModules leaves modules already at the pin alone' {
-        $probe = 'function Get-Module { [pscustomobject]@{ Version = [version](Get-Content (Join-Path $global:NowhereRepoDir ''powershell/modules.json'') -Raw | ConvertFrom-Json).modules[0].version } }; function Install-Module { "INSTALL $($args -join '' '')" }; Update-PinnedModules'
-        $r = Invoke-NowhereSession -Role server -Probe $probe
-        ($r.Output -join "`n") | Should -Not -Match 'INSTALL -Name PSReadLine'
-    }
-    It 'Update-PSProfile does not float modules with Update-Module' {
-        $text = Get-Content (Join-Path $script:RepoRoot 'powershell/core/conf.d/40-profile.ps1') -Raw
-        $text | Should -Not -Match 'Update-Module'
-        $text | Should -Match 'Update-PinnedModules'
-    }
-    It 'Update-System runs uv and pinned-module refresh' {
-        $text = Get-Content (Join-Path $script:RepoRoot 'powershell/core/bin/Update-System.ps1') -Raw
-        $text | Should -Match 'Update-Uv'
-        $text | Should -Match 'Update-PinnedModules'
+        $r.Output | Where-Object { $_ -match '^winget ' } | Should -BeNullOrEmpty
     }
 }
 
@@ -93,6 +69,36 @@ Describe 'shared Macchiato starship config' {
     }
 }
 
+Describe 'cached init' {
+    It 'caches the generated script under the cache dir and dot-sources it' {
+        $probe = '$f = Join-Path $global:NowhereCacheDir ''starship-init.ps1''; "cached=" + (Get-Content $f -Raw).Trim()'
+        $r = Invoke-NowhereSession -Role server -Tools starship -Probe $probe
+        $r.Errors | Should -BeNullOrEmpty
+        $r.Output | Should -Contain 'cached=starship init powershell'
+        # the cached script ran: the shim's echo of its own arguments
+        $r.Output | Should -Contain 'starship init powershell'
+    }
+    It 'regenerates only when the binary is newer than the cache' {
+        $probe = @'
+$b = (Get-Command starship -CommandType Application).Source
+$f = Join-Path $global:NowhereCacheDir 'starship-init.ps1'
+Set-Content $f "'warm'"; (Get-Item $b).LastWriteTimeUtc = [datetime]'2000-01-01'
+$null = Get-NowhereCachedInit starship-init starship @('init', 'powershell'); "old-bin=" + (Get-Content $f -Raw).Trim()
+(Get-Item $b).LastWriteTimeUtc = [datetime]'2099-01-01'
+$null = Get-NowhereCachedInit starship-init starship @('init', 'powershell'); "new-bin=" + (Get-Content $f -Raw).Trim()
+'@
+        $r = Invoke-NowhereSession -Role server -Tools starship -Probe $probe
+        $r.Errors | Should -BeNullOrEmpty
+        $r.Output | Should -Contain "old-bin='warm'"
+        $r.Output | Should -Contain 'new-bin=starship init powershell'
+    }
+    It 'an absent tool gives no script and no error' {
+        $r = Invoke-NowhereSession -Role server -Probe '"r=[" + (Get-NowhereCachedInit zoxide-init zoxide @(''init'')) + "]"'
+        $r.Errors | Should -BeNullOrEmpty
+        $r.Output | Should -Contain 'r=[]'
+    }
+}
+
 Describe 'missing tools' {
     It 'starts silently apart from one run-bootstrap hint' {
         $r = Invoke-NowhereSession -Role devbox -Tools @() -Probe '"ok"'
@@ -101,7 +107,12 @@ Describe 'missing tools' {
         @($r.Output | Where-Object { $_ -match 'bootstrap' }).Count | Should -Be 1
     }
     It 'prints no hint when nothing is missing' {
-        $r = Invoke-NowhereSession -Role server -Tools starship, zoxide, carapace, fzf, eza, git -Probe '"ok"'
+        $r = Invoke-NowhereSession -Role server -Tools (Get-NowhereCoreToolList) -Probe '"ok"'
         @($r.Output | Where-Object { $_ -match 'bootstrap' }).Count | Should -Be 0
+    }
+    It 'every core tool in shared/core-tools.txt is a core tool in the manifest' {
+        $core = ((Get-Content (Join-Path $script:RepoRoot 'shared/tools.json') -Raw | ConvertFrom-Json).tools |
+            Where-Object layer -eq 'core').name
+        foreach ($t in Get-NowhereCoreToolList) { $core | Should -Contain $t }
     }
 }

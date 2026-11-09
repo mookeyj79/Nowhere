@@ -28,6 +28,18 @@ _Avoid_: installer, setup script
 A pinned list of what bootstrap installs: tools, PowerShell modules or ZSH plugins.
 _Avoid_: lockfile, requirements
 
+**Install plan**:
+What the manifests ask for on one role, as a list of actions (an apt or winget package, the uv installer, a release binary, a uv tool, a plugin or module at its pin). Computed by `bootstrap/lib/plan.sh` or `Plan.ps1` from the files alone; it installs nothing.
+_Avoid_: install list, resolved manifest
+
+**Pins**:
+Bringing a machine to every pin in its install plan and leaving what is already there alone (`bootstrap/lib/pins.sh`, `Sync-Pins.ps1`). Bootstrap runs it strictly (stop at the first failure); `update` runs it leniently (report, carry on).
+_Avoid_: sync, reconcile step, upgrade
+
+**Core tools**:
+`shared/core-tools.txt`, the few core tools the profile leans on at startup (prompt, completions, `cd`, listing, git). Any one missing gives the single "run bootstrap" hint.
+_Avoid_: required tools, hint list
+
 **Local override**:
 The per-machine file, kept outside the repo, holding values that differ on one machine, such as paths, a WSL distro or a token. Never committed; the repo ships only an `.example` of it.
 _Avoid_: local config, env file
@@ -52,4 +64,5 @@ _Avoid_: banner script, motd profile
 
 - A **role** is one of four; it decides which layers load (**core** always, **dev layer** on a DevBox only) and whether the **Server MOTD** shows.
 - **Bootstrap** installs from a **manifest**, writes the **stub** and seeds the **local override**; the stub sets the role.
+- The **install plan** is read from the **manifests** for a **role**; **pins** apply it, from bootstrap and from `update`.
 - The **parity list** is how the shells are proven to agree on **core**.

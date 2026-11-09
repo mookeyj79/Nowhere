@@ -58,27 +58,3 @@ function wget {
 if ($IsWindows) {
     function List-COM { Get-PnpDevice -Class Ports -PresentOnly | Select-Object FriendlyName, Status }
 }
-
-# --- Pinned tooling updates -------------------------------------------------
-#  Used by Update-System and Update-PSProfile. Pins in powershell/modules.json
-#  are authoritative: modules are brought to exactly the pinned version, never
-#  floated to latest.
-function Update-Uv {
-    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-        Write-Host 'uv not found, skipping (run bootstrap)'
-        return
-    }
-    uv self update
-    if ($LASTEXITCODE -ne 0) { Write-Warning 'uv self update failed' }
-}
-
-function Update-PinnedModules {
-    $manifest = Join-Path $global:NowhereRepoDir 'powershell/modules.json'
-    foreach ($m in (Get-Content $manifest -Raw | ConvertFrom-Json).modules) {
-        $have = Get-Module -ListAvailable -Name $m.name | Where-Object { $_.Version -eq [version]$m.version }
-        if ($have) { Write-Host "  module $($m.name) already at $($m.version)"; continue }
-        Write-Host "  -> $($m.name) $($m.version)" -ForegroundColor DarkGray
-        try { Install-Module -Name $m.name -RequiredVersion $m.version -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop }
-        catch { Write-Warning "    $_" }
-    }
-}

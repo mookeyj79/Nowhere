@@ -6,10 +6,7 @@
 # =============================================================================
 
 # Where the clone lives (default: the clone this profile is loaded from)
-# $env:NOWHERE_HOME = 'D:\Dev\Nowhere'
-
-# ConfCrypt checkout (no default; unset means ConfCrypt is not wired up)
-# $env:CONFCRYPT_HOME = 'D:\Dev\Homelab\Scripts\confcrypt'
+# $env:NOWHERE_HOME = 'C:\src\Nowhere'
 
 # Editor override (default: nano on servers, 'code --wait' on devboxes)
 # $NowhereEditor = 'code --wait'
@@ -20,7 +17,7 @@
 
 # Extra or overriding `goto` bookmarks
 # $NowhereGotoBookmarks = @{
-#     lab = 'D:\Dev\Homelab'
+#     src = 'C:\src'
 # }
 
 # Tokens (plaintext; this file must stay owner-only)

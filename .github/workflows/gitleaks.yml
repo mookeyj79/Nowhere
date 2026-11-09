@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: shellcheck -x scripts/*.sh .githooks/pre-commit bootstrap/bootstrap.sh tests/zsh/*.sh tests/uvtools-smoke.sh
+      - run: shellcheck -x scripts/*.sh .githooks/pre-commit bootstrap/bootstrap.sh bootstrap/lib/*.sh zsh/core/bin/update tests/zsh/*.sh tests/uvtools-smoke.sh
   uvtools-smoke:
     # The sandbox suites fake uv; this installs the real uvTools pins on both OSes.
     strategy:

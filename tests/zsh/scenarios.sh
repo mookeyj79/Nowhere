@@ -24,15 +24,15 @@ scenario_role_unset() {
 # --- profile: local override -----------------------------------------------------
 scenario_local_none() {
     reset_session; SESSION_TOOLS="git"
-    session devbox 'echo "confcrypt=[$CONFCRYPT_HOME]"; echo "home=$NOWHERE_HOME"'
+    session devbox 'echo "home=$NOWHERE_HOME"'
     assert_empty "$ERR"; assert_eq "$CODE" 0
-    assert_line "$OUT" 'confcrypt=[]'; assert_line "$OUT" "home=$REPO_ROOT"
+    assert_line "$OUT" "home=$REPO_ROOT"
 }
 scenario_local_wins() {
     reset_session; SESSION_TOOLS="git"
-    SESSION_LOCAL='NowhereEditor=vim; export CONFCRYPT_HOME=/x/confcrypt'
-    session devbox 'echo "editor=$EDITOR"; echo "confcrypt=$CONFCRYPT_HOME"'
-    assert_empty "$ERR"; assert_line "$OUT" editor=vim; assert_line "$OUT" confcrypt=/x/confcrypt
+    SESSION_LOCAL='NowhereEditor=vim'
+    session devbox 'echo "editor=$EDITOR"'
+    assert_empty "$ERR"; assert_line "$OUT" editor=vim
 }
 scenario_local_nowhere_home() {
     reset_session; SESSION_TOOLS="git"
@@ -73,7 +73,7 @@ scenario_missing_tools_hint() {
     assert_eq "$(count_matching "$OUT" bootstrap)" 1 'hint count'
 }
 scenario_no_hint_when_complete() {
-    reset_session; SESSION_TOOLS="starship zoxide carapace fzf eza git"
+    reset_session; SESSION_TOOLS="$CORE_TOOLS"
     SESSION_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:C zsh-history-substring-search:zsh-history-substring-search.zsh:D catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:A zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:B"
     session server 'echo ok'
     assert_eq "$(count_matching "$OUT" bootstrap)" 0 'hint count'
@@ -81,13 +81,13 @@ scenario_no_hint_when_complete() {
 
 # --- profile: plugin directory convention ----------------------------------------
 scenario_plugin_skip() {
-    reset_session; SESSION_TOOLS="starship zoxide carapace fzf eza git"
+    reset_session; SESSION_TOOLS="$CORE_TOOLS"
     session devbox 'echo "ok"'
     assert_empty "$ERR"; assert_line "$OUT" ok
     assert_eq "$(count_matching "$OUT" bootstrap)" 1 'one hint for missing plugins'
 }
 scenario_plugin_load() {
-    reset_session; SESSION_TOOLS="starship zoxide carapace fzf eza git"
+    reset_session; SESSION_TOOLS="$CORE_TOOLS"
     SESSION_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:AS_LOADED zsh-history-substring-search:zsh-history-substring-search.zsh:HS_LOADED catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:THEME_LOADED zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:SYNTAX_LOADED"
     session server 'echo "theme=$THEME_LOADED syntax=$SYNTAX_LOADED order=$ORDER"'
     assert_empty "$ERR"
