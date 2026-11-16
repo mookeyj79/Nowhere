@@ -14,7 +14,7 @@ ZSH_BIN=$(command -v zsh || true)
 CORE_TOOLS=$(grep -v '^#' "$REPO_ROOT/shared/core-tools.txt" | tr '\n' ' ')
 # Every pinned plugin as SESSION_PLUGINS stubs (name:file-the-profile-sources:VAR):
 # with CORE_TOOLS, a complete core install (the parity list's "core" tools).
-ALL_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:C zsh-history-substring-search:zsh-history-substring-search.zsh:D catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:A zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:B"
+ALL_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:C zsh-history-substring-search:zsh-history-substring-search.zsh:D zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:B"
 SANDBOXES=()
 
 cleanup_sandboxes() {
@@ -61,12 +61,13 @@ ZSH_SANDBOX_PRELUDE='compinit() { unfunction compinit; autoload -Uz compinit; co
 #                    default: a shim that echoes its name and arguments
 #   SESSION_REAL     host binaries (mkdir, touch...) linked into the bin
 #   SESSION_LOCAL    local override text; unset = no override file
+#   SESSION_THEME_FILE theme file text (~/.config/nowhere/theme.zsh); unset = none
 #   SESSION_PLUGINS  stub plugins, name:relative/file:VAR (the file sets VAR=1)
 #   SESSION_FZF_ZSH  what the fzf shim prints for --zsh
 #   SESSION_REUSE    a sandbox from an earlier call to run in again (caches,
 #                    existing shims kept as they are)
 # Outputs: OUT (stdout), ERR (stderr), CODE, SESSION_SB (the sandbox used).
-reset_session() { unset SESSION_LOCAL SESSION_TOOLS SESSION_SHIM SESSION_PLUGINS SESSION_FZF_ZSH SESSION_REAL SESSION_REUSE; }
+reset_session() { unset SESSION_LOCAL SESSION_THEME_FILE SESSION_TOOLS SESSION_SHIM SESSION_PLUGINS SESSION_FZF_ZSH SESSION_REAL SESSION_REUSE; }
 
 session_echo_shim() { printf '#!/bin/sh\necho %s "$@"\n' "$2" > "$1"; }
 
@@ -77,6 +78,7 @@ session() {
     SESSION_SB=$sb
     mkdir -p "$home/.config/nowhere" "$bin" "$sb/xdg"
     if [ "${SESSION_LOCAL+set}" = set ]; then printf '%s\n' "$SESSION_LOCAL" > "$home/.config/nowhere/local.zsh"; fi
+    if [ "${SESSION_THEME_FILE+set}" = set ]; then printf '%s\n' "$SESSION_THEME_FILE" > "$home/.config/nowhere/theme.zsh"; fi
     local t
     for t in ${SESSION_TOOLS:-}; do
         [ -e "$bin/$t" ] && continue

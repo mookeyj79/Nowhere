@@ -1,9 +1,8 @@
 # =============================================================================
 #  10-psreadline.ps1
-#  History, prediction, key bindings, Catppuccin Macchiato syntax colors.
+#  History, prediction, key bindings, syntax colors.
 #
 #  No external modules — colors are inlined as ANSI escape sequences.
-#  Dropping the Catppuccin module saves one of the biggest startup costs.
 # =============================================================================
 
 # --- History ----------------------------------------------------------------
@@ -48,23 +47,28 @@ Set-PSReadLineKeyHandler -Key '"', "'" -BriefDescription SmartInsertQuote `
         }
     }
 
-# --- Catppuccin Macchiato syntax colors (hardcoded ANSI — no module) --------
+# --- Syntax colors: the terminal's sixteen ------------------------------------
+#  SGR codes for the terminal's own palette (30-37 normal, 90-97 bright), so the
+#  command line follows the terminal's theme. 39 is the terminal's foreground;
+#  7 (reverse video) marks the selection. The tokens zsh also colors take the
+#  same color there (tests/syntax-colors.txt). A theme file
+#  (~/.config/nowhere/theme.ps1) loads after this one and can change any of them.
 Set-PSReadLineOption -Colors @{
-    Command            = "`e[38;2;138;173;244m"   # Blue
-    Comment            = "`e[38;2;110;115;141m"   # Overlay0
-    ContinuationPrompt = "`e[38;2;139;213;202m"   # Teal
-    Default            = "`e[38;2;202;211;245m"   # Text
-    Emphasis           = "`e[38;2;237;135;150m"   # Red
-    Error              = "`e[38;2;237;135;150m"   # Red
-    InlinePrediction   = "`e[38;2;128;135;162m"   # Overlay1
-    Keyword            = "`e[38;2;198;160;246m"   # Mauve
-    ListPrediction     = "`e[38;2;198;160;246m"   # Mauve
-    Member             = "`e[38;2;244;219;214m"   # Rosewater
-    Number             = "`e[38;2;245;169;127m"   # Peach
-    Operator           = "`e[38;2;145;215;227m"   # Sky
-    Parameter          = "`e[38;2;245;189;230m"   # Pink
-    Selection          = "`e[48;2;54;58;79m"       # Surface0 (background)
-    String             = "`e[38;2;166;218;149m"   # Green
-    Type               = "`e[38;2;238;212;159m"   # Yellow
-    Variable           = "`e[38;2;183;189;248m"   # Lavender
+    Command            = "`e[34m"   # blue
+    Comment            = "`e[90m"   # bright black
+    ContinuationPrompt = "`e[36m"   # cyan
+    Default            = "`e[39m"   # terminal foreground
+    Emphasis           = "`e[31m"   # red
+    Error              = "`e[31m"   # red
+    InlinePrediction   = "`e[90m"   # bright black
+    Keyword            = "`e[35m"   # magenta
+    ListPrediction     = "`e[35m"   # magenta
+    Member             = "`e[39m"   # terminal foreground
+    Number             = "`e[91m"   # bright red
+    Operator           = "`e[96m"   # bright cyan
+    Parameter          = "`e[95m"   # bright magenta
+    Selection          = "`e[7m"    # reverse video
+    String             = "`e[32m"   # green
+    Type               = "`e[33m"   # yellow
+    Variable           = "`e[36m"   # cyan
 }

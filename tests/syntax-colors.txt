@@ -1,0 +1,19 @@
+# Command-line colors both shells share, read by BOTH suites (alongside
+# tests/parity.txt, which covers commands and settings).
+#   tests/powershell/Contract.Tests.ps1 (pwsh) and tests/zsh/scenarios-line-editor.sh (zsh)
+# Each token is one of the terminal's sixteen colors, by name, so the shell
+# follows the terminal's theme.
+#   token|color|psreadline|zsh
+# color      : black red green yellow blue magenta cyan white, or bright-<one of those>
+# psreadline : the Set-PSReadLineOption -Colors key; pwsh must hold the color's
+#              SGR code (ESC[30m..ESC[37m, bright ESC[90m..ESC[97m)
+# zsh        : comma list of ZSH_HIGHLIGHT_STYLES keys, or the variable
+#              ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE; each style must hold fg=<color>
+#              (fg=8..fg=15 for a bright color: zsh has no names for them)
+command|blue|Command|arg0,precommand
+string|green|String|single-quoted-argument,double-quoted-argument,dollar-quoted-argument
+comment|bright-black|Comment|comment
+keyword|magenta|Keyword|reserved-word
+variable|cyan|Variable|dollar-double-quoted-argument
+error|red|Error|unknown-token
+ghost-text|bright-black|InlinePrediction|ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE

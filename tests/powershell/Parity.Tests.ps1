@@ -93,6 +93,13 @@ Describe 'parity list (<Role> / <Tools> / <Local>)' -ForEach $groups {
         switch ($Local) {
             '-' { }
             'empty' { $p.LocalOverride = '' }
+            { $_ -like 'theme:*' } {
+                $p.ThemeFile = @($Local.Substring(6) -split ';' | Where-Object { $_ } | ForEach-Object {
+                    $name, $value = $_ -split '=', 2
+                    "`$env:$name = '$value'"
+                }) -join "`n"
+                break
+            }
             default {
                 $p.LocalOverride = @($Local -split ';' | ForEach-Object {
                     $name, $value = $_ -split '=', 2
