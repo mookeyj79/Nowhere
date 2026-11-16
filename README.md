@@ -45,11 +45,11 @@ Windows Server 2022 and older have no winget: bootstrap warns, skips only the co
 
 | Path | Contents |
 | --- | --- |
-| `shared/` | Shell-neutral files: `starship.toml` (the one Catppuccin Macchiato prompt), `tools.json` (tool manifest, `uvTools` pins), `core-tools.txt` (the tools whose absence gives the bootstrap hint), `server-motd/config.toml.example` |
+| `shared/` | Shell-neutral files: `starship.toml` (the prompt, in the terminal's own colors), `tools.json` (tool manifest, `uvTools` pins), `core-tools.txt` (the tools whose absence gives the bootstrap hint), `server-motd/config.toml.example` |
 | `powershell/` | `profile.ps1` entry point, `core/` and `dev/` each with `conf.d/` (numbered files, merged in one filename order), `core/bin/` (`Update-System.ps1`, on PATH), `core/lib/` (`UpdateSystem.ps1`, the testable part of `update`), `modules.json` (pinned modules), `powershell.config.json`, `local.ps1.example` |
 | `zsh/` | The same shape: `profile.zsh`, `core/` and `dev/` with `conf.d/`, `core/bin/` (`update`), `plugins.json` (plugins pinned by SHA, no plugin manager), `local.zsh.example` |
 | `bootstrap/` | `bootstrap.ps1` (Windows), `bootstrap.sh` (Linux), and `lib/` with the install plan and pins for each OS |
-| `tests/` | Sandboxed suites for both shells and the shared parity list (see Tests) |
+| `tests/` | Sandboxed suites for both shells, the shared parity list and the shared syntax colors (see Tests) |
 | `docs/` | Agent docs and the [real-machine checklist](docs/real-machine-checklist.md) |
 | `scripts/` | Wayfinder helpers for the issue map: `add-blocker.sh`, `frontier.sh`, `map-append.sh`, `resolve.sh` |
 | `.githooks/`, `.github/` | gitleaks pre-commit hook; CI (gitleaks, shellcheck, Pester, zsh harness) |
@@ -60,6 +60,14 @@ conf.d numbering (same on both shells): `00` environment, `10` line editor, `20`
 
 - **Stub**: a few lines at `$PROFILE` (PowerShell) or `~/.zshrc` (ZSH) that set `NOWHERE_ROLE` (`devbox` or `server`) and source the profile from the clone. Bootstrap writes it and backs up a different existing one.
 - **Local override**: `~/.config/nowhere/local.ps1` or `local.zsh`, outside the repo and never committed, sourced before any conf.d file. It holds machine-specific values: `NOWHERE_HOME`, the editor, `goto` bookmarks, the WSL distro, tokens. Every key is optional and read with a default. Bootstrap seeds it from `local.ps1.example` / `local.zsh.example` with owner-only permissions and never overwrites it.
+
+## Colors and the theme file
+
+Nowhere names no theme and holds no color values. Every color it sets, in the Starship prompt, PSReadLine and zsh-syntax-highlighting, is one of the terminal's sixteen, by name, so the shell takes on whatever theme the terminal has: switch the terminal between a dark and a light scheme and the prompt and command line follow. Where both shells color the same kind of token they use the same color; `tests/syntax-colors.txt` records the mapping and both suites check it. (zsh-syntax-highlighting colors a variable only inside double quotes; PSReadLine colors every `$var`.)
+
+A theme can refine this through one optional file, `~/.config/nowhere/theme.ps1` or `theme.zsh`. It lives next to the local override, outside the repo, and is sourced after the last conf.d file, so anything it sets wins: PSReadLine colors (`Set-PSReadLineOption -Colors`), `ZSH_HIGHLIGHT_STYLES` and `ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE`, tool variables such as `FZF_DEFAULT_OPTS` or `BAT_THEME`, or `STARSHIP_CONFIG` for a different prompt config. A missing file is silent. Nowhere ships no theme file, and bootstrap and `update` never create or change one; theme files come from the theme's own repo.
+
+Machines bootstrapped before this change still have the old `catppuccin-zsh-syntax-highlighting` clone under `~/.local/share/nowhere/plugins`. Nothing loads it any more; delete it by hand if you like.
 
 ## Servers and the MOTD
 
@@ -79,7 +87,8 @@ The one maintenance name on every role. On Windows it runs `Update-System`, whic
 - `tests/zsh/run.sh`: real `zsh` against a throwaway HOME with a fake apt/curl. Needs `zsh` and `jq`. Run `bash tests/zsh/run.sh [scenario-id ...]`.
 - `tests/powershell/`: Pester 5.5+ against a real `pwsh` in a throwaway HOME. Run `Invoke-Pester tests/powershell` (slow, several minutes). Pester result files (`testResults.xml`) are git-ignored; CI writes its own to the runner's temp directory.
 - `tests/scenarios.txt` (and `tests/zsh/scenarios-*.txt`) lists the scenario ids and their pwsh counterparts. Before running anything, the zsh harness checks that every line is a well-formed record, no id appears twice, and the index and the `scenario_*` functions match in both directions (`tests/zsh/index.sh`). `Parity.Tests.ps1` checks the same records and that every counterpart it names exists.
-- `tests/parity.txt` is the one list **both** suites read (`Parity.Tests.ps1` and `scenarios-parity.sh`): core command names, tool guards, role gating, `EDITOR` defaults, the local override, and missing-tool silence must be identical in pwsh and zsh. Each row picks a role, the tools on PATH (or `core` for a complete install) and a local override, then checks a command, a variable or the hint count. Add a line there to extend the parity contract.
+- `tests/parity.txt` is the one list **both** suites read (`Parity.Tests.ps1` and `scenarios-parity.sh`): core command names, tool guards, role gating, `EDITOR` defaults, the local override, the theme file, and missing-tool silence must be identical in pwsh and zsh. Each row picks a role, the tools on PATH (or `core` for a complete install) and a local override (or theme file), then checks a command, a variable or the hint count. Add a line there to extend the parity contract.
+- `tests/syntax-colors.txt` is the other file both suites read: the color name of each token both shells color (command, string, comment, keyword, variable, error, ghost text), checked against PSReadLine (`Contract.Tests.ps1`) and `ZSH_HIGHLIGHT_STYLES` (`scenarios-line-editor.sh`).
 - `tests/uvtools-smoke.sh`: installs every `uvTools` pin in the install plan with the real `uv` (network), runs its `--help`, and checks that pins recognises it at its pin from the real `uv tool list` output (and does not mistake another pin for it). Both sandboxes fake `uv`, so this is the only check of that listing format. Needs `uv`, `jq` and `bash` (and `pwsh` on Windows). Run `sh tests/uvtools-smoke.sh`.
 - CI (`.github/workflows/gitleaks.yml`) runs gitleaks, shellcheck, Pester on Windows, the zsh harness on Ubuntu, and the uvTools smoke test on both.
 

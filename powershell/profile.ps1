@@ -5,7 +5,8 @@
 #  (devbox | server) and dot-sources this file from the clone.
 #
 #  Order: local override first (~/.config/nowhere/local.ps1), then core/conf.d
-#  merged with dev/conf.d (devbox only) in one filename order. Every value the
+#  merged with dev/conf.d (devbox only) in one filename order, then the theme
+#  file (~/.config/nowhere/theme.ps1) if there is one. Every value the
 #  override can set is read with a default, so a missing override still works.
 # =============================================================================
 
@@ -33,4 +34,11 @@ $_files = foreach ($_layer in $_layers) {
 }
 foreach ($_file in ($_files | Sort-Object Name)) { . $_file.FullName }
 
-Remove-Variable _localOverride, _layers, _layer, _bin, _files, _file -ErrorAction SilentlyContinue
+# --- Theme file -------------------------------------------------------------
+#  Optional, never shipped or seeded: a terminal theme's own colors for the shell
+#  (PSReadLine colors, tool variables, STARSHIP_CONFIG). Last, so its values win
+#  over conf.d.
+$_themeFile = Join-Path $HOME '.config/nowhere/theme.ps1'
+if (Test-Path -LiteralPath $_themeFile) { . $_themeFile }
+
+Remove-Variable _localOverride, _themeFile, _layers, _layer, _bin, _files, _file -ErrorAction SilentlyContinue

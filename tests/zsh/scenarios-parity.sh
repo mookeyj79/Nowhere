@@ -10,7 +10,7 @@ scenario_parity() {
     rows=$(tr -d '\r' < "$file" | grep -v -e '^#' -e '^$' | awk -F'|' '$2 == "both" || $2 == "zsh"')
     [ -n "$rows" ] || fail "no parity rows for zsh"
     groups=$(printf '%s\n' "$rows" | awk -F'|' '{print $3 "|" $4 "|" $5}' | sort -u)
-    local role tools ovr id r t l check arg expect got pair probe
+    local role tools ovr id r t l check arg expect got pair pairs probe
     while IFS='|' read -r role tools ovr; do
         probe=""
         while IFS='|' read -r id _ r t l check arg expect; do
@@ -31,6 +31,13 @@ scenario_parity() {
         case "$ovr" in
             -) ;;
             empty) SESSION_LOCAL='' ;;
+            theme:*)
+                SESSION_THEME_FILE=''
+                pairs=${ovr#theme:}
+                while IFS= read -r pair; do
+                    [ -n "$pair" ] && SESSION_THEME_FILE+="export ${pair%%=*}='${pair#*=}'"$'\n'
+                done <<< "${pairs//;/$'\n'}"
+                ;;
             *)
                 SESSION_LOCAL=''
                 while IFS= read -r pair; do

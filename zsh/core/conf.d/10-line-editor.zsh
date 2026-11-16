@@ -24,8 +24,9 @@ local _suggest=0 _search=0
 nowhere_plugin zsh-autosuggestions zsh-autosuggestions.zsh && _suggest=1
 nowhere_plugin zsh-history-substring-search zsh-history-substring-search.zsh && _search=1
 
-# Ghost text: one grey suggestion from history (Overlay1, as in the PSReadLine config)
-typeset -g ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#8087a2'
+# Ghost text: one dim suggestion from history, in the terminal's bright black
+# (InlinePrediction in the PSReadLine config; tests/syntax-colors.txt)
+typeset -g ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=8'
 typeset -ga ZSH_AUTOSUGGEST_STRATEGY=(history)
 
 # --- Key bindings -------------------------------------------------------------

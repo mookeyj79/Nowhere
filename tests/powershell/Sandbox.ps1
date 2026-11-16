@@ -8,7 +8,9 @@ function Get-NowhereCoreToolList {
     @(Get-Content (Join-Path $script:RepoRoot 'shared/core-tools.txt') | Where-Object { $_ -and $_ -notmatch '^\s*#' })
 }
 
-# Invoke-NowhereSession [-Role] [-Probe] [-LocalOverride] [-Tools]
+# Invoke-NowhereSession [-Role] [-Probe] [-LocalOverride] [-ThemeFile] [-Tools]
+#   -LocalOverride  text of ~/.config/nowhere/local.ps1 (left out: no file)
+#   -ThemeFile      text of ~/.config/nowhere/theme.ps1 (left out: no file)
 #   -Tools  shims for exactly these tools; each echoes its name and arguments.
 #           PATH is the shims plus the pwsh directory, nothing from the host,
 #           so leaving -Tools out means no tools at all (as zsh's `session`).
@@ -18,6 +20,7 @@ function Invoke-NowhereSession {
         [string]$Role,
         [string]$Probe = '',
         [string]$LocalOverride,
+        [string]$ThemeFile,
         [string[]]$Tools = @()
     )
     $sandbox = Join-Path ([IO.Path]::GetTempPath()) ('nowhere-' + [guid]::NewGuid().ToString('N'))
@@ -26,6 +29,9 @@ function Invoke-NowhereSession {
     New-Item -ItemType Directory -Path $cfg, (Join-Path $home_ 'AppData/Local'), (Join-Path $sandbox 'xdg') -Force | Out-Null
     if ($PSBoundParameters.ContainsKey('LocalOverride')) {
         Set-Content -Path (Join-Path $cfg 'local.ps1') -Value $LocalOverride
+    }
+    if ($PSBoundParameters.ContainsKey('ThemeFile')) {
+        Set-Content -Path (Join-Path $cfg 'theme.ps1') -Value $ThemeFile
     }
     $bin = Join-Path $sandbox 'bin'
     New-Item -ItemType Directory -Path $bin -Force | Out-Null

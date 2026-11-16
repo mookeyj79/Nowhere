@@ -18,6 +18,35 @@ scenario_local_nowhere_home() {
     assert_line "$OUT" "home=$REPO_ROOT"
 }
 
+# --- profile: theme file -----------------------------------------------------------
+# A complete install with silent shims, so that a clean start prints nothing.
+theme_silent_shim() { printf "#!/bin/sh\n" > "$1"; }
+scenario_theme_file_sourced() {
+    reset_session; SESSION_TOOLS=$CORE_TOOLS; SESSION_PLUGINS=$ALL_PLUGINS; SESSION_SHIM=theme_silent_shim
+    SESSION_THEME_FILE='echo "theme ran"'
+    session devbox
+    assert_empty "$ERR"
+    assert_eq "$OUT" 'theme ran' 'theme file output'
+}
+scenario_theme_file_last() {
+    reset_session; SESSION_TOOLS=$CORE_TOOLS; SESSION_PLUGINS=$ALL_PLUGINS; SESSION_SHIM=theme_silent_shim
+    SESSION_THEME_FILE='ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=fg=red
+ZSH_HIGHLIGHT_STYLES[comment]=fg=yellow'
+    session devbox 'echo "ghost=$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE"; echo "comment=$ZSH_HIGHLIGHT_STYLES[comment]"
+        echo "string=$ZSH_HIGHLIGHT_STYLES[single-quoted-argument]"'
+    assert_empty "$ERR"
+    assert_line "$OUT" 'ghost=fg=red'
+    assert_line "$OUT" 'comment=fg=yellow'
+    assert_line "$OUT" 'string=fg=green'   # untouched: still the conf.d style
+}
+scenario_theme_file_absent() {
+    reset_session; SESSION_TOOLS=$CORE_TOOLS; SESSION_PLUGINS=$ALL_PLUGINS; SESSION_SHIM=theme_silent_shim
+    session devbox
+    assert_eq "$CODE" 0 'exit code'
+    assert_empty "$ERR"
+    assert_empty "$OUT" 'no theme file prints nothing'
+}
+
 # --- profile: plugin directory convention ----------------------------------------
 scenario_plugin_skip() {
     reset_session; SESSION_TOOLS="$CORE_TOOLS"
@@ -27,10 +56,10 @@ scenario_plugin_skip() {
 }
 scenario_plugin_load() {
     reset_session; SESSION_TOOLS="$CORE_TOOLS"
-    SESSION_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:AS_LOADED zsh-history-substring-search:zsh-history-substring-search.zsh:HS_LOADED catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:THEME_LOADED zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:SYNTAX_LOADED"
-    session server 'echo "theme=$THEME_LOADED syntax=$SYNTAX_LOADED order=$ORDER"'
+    SESSION_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:AS_LOADED zsh-history-substring-search:zsh-history-substring-search.zsh:HS_LOADED zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:SYNTAX_LOADED"
+    session server 'echo "syntax=$SYNTAX_LOADED order=$ORDER"'
     assert_empty "$ERR"
-    assert_line "$OUT" 'theme=1 syntax=1 order=zsh-autosuggestions,zsh-history-substring-search,catppuccin-zsh-syntax-highlighting,zsh-syntax-highlighting,'
+    assert_line "$OUT" 'syntax=1 order=zsh-autosuggestions,zsh-history-substring-search,zsh-syntax-highlighting,'
     assert_eq "$(count_matching "$OUT" 'run bootstrap')" 0 'no hint when plugins present'
 }
 
@@ -54,7 +83,7 @@ scenario_boot_manifest_sane() {
     assert_match "$(jq -r '.tools[] | select(.name == "gitleaks") | .release.sha256.arm64' "$m")" '^[0-9a-f]{64}$'
     # plugins: exact 40-hex SHAs
     assert_eq "$(jq '[.plugins[] | select(.sha | test("^[0-9a-f]{40}$") | not)] | length' "$REPO_ROOT/zsh/plugins.json")" 0 'unpinned plugin'
-    assert_eq "$(jq '.plugins | length' "$REPO_ROOT/zsh/plugins.json")" 4 'plugin count'
+    assert_eq "$(jq '.plugins | length' "$REPO_ROOT/zsh/plugins.json")" 3 'plugin count'
 }
 scenario_boot_tools_devbox() {
     new_bootstrap_sandbox

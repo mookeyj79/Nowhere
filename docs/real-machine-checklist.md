@@ -7,8 +7,9 @@ The sandboxed suites (`tests/`) prove the files and the shared parity list. They
 - [ ] Clone the repo and run the role's bootstrap (`bootstrap.ps1` or `bootstrap.sh`, `devbox` or `server`). It finishes without errors.
 - [ ] Run bootstrap a second time. It reports nothing to do and changes nothing.
 - [ ] Open a new shell. No errors, no warnings, at most the one "run bootstrap" hint (and none if everything is installed).
-- [ ] Prompt is the Catppuccin Macchiato Starship prompt, with icons rendering (font set in the terminal).
+- [ ] Prompt is the segmented Starship prompt, with icons rendering (font set in the terminal). Switching the terminal between a dark and a light color scheme recolors the prompt and the command line.
 - [ ] `~/.config/nowhere/local.ps1` or `local.zsh` exists, owner-only, and was not overwritten by the second bootstrap.
+- [ ] No `~/.config/nowhere/theme.ps1` or `theme.zsh` exists after bootstrap. Writing one that sets a single color (``Set-PSReadLineOption -Colors @{ Comment = "`e[33m" }``, or `ZSH_HIGHLIGHT_STYLES[comment]=fg=yellow`) and opening a new shell changes that color and nothing else; deleting it brings the old color back.
 - [ ] `git config core.hooksPath` prints `.githooks`. Staging a fake secret and committing is blocked by gitleaks.
 - [ ] Core commands exist: `reload`, `editp`, `aliases`, `update`, `goto`, `mkcd`, `gcl`, `workon`, `..` to `.....`. With eza: `ll`, `la`, `lt`. With git: `gst`, `gco`, `glog`.
 - [ ] `echo $EDITOR` (`$env:EDITOR`) matches the role: `code --wait` on a DevBox, `nano` on a Server.
@@ -40,8 +41,8 @@ The sandboxed suites (`tests/`) prove the files and the shared parity list. They
 ## Linux DevBox
 
 - [ ] `~/.zshrc` stub sets `NOWHERE_ROLE=devbox`; `echo $SHELL` is zsh (run `chsh -s $(command -v zsh)` if not).
-- [ ] ZSH plugins exist at the pinned SHAs under `~/.local/share/nowhere/plugins` (autosuggestions, substring search, syntax highlighting with the Macchiato theme).
-- [ ] Syntax highlighting uses Macchiato colours; typing an invalid command turns red.
+- [ ] ZSH plugins exist at the pinned SHAs under `~/.local/share/nowhere/plugins` (autosuggestions, substring search, syntax highlighting).
+- [ ] Syntax highlighting uses the terminal's colors: commands blue, strings green, comments dim; typing an invalid command turns red.
 - [ ] Dev layer aliases (`topl`, `tfp`, `kgp`, `dcup`) exist only with their tools; helm, terraform and tofu came from the pinned releases (`~/.local/bin`); `code` is devbox-manual (install it by hand) and is skipped without errors until you do.
 - [ ] `bat`/`fd` work even though Debian names them `batcat`/`fdfind`.
 - [ ] `update` runs apt, brings release binaries and plugins to their pins, and runs `uv self update`; a failing step does not stop the others.

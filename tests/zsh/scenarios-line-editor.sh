@@ -3,7 +3,7 @@
 # Scenarios for zsh/core/conf.d/10-line-editor.zsh and 90-syntax-highlighting.zsh
 # (ticket #15). Sourced by run.sh; ids and pwsh counterparts live in tests/scenarios.txt.
 
-LE_ALL_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:AS_LOADED zsh-history-substring-search:zsh-history-substring-search.zsh:HS_LOADED catppuccin-zsh-syntax-highlighting:themes/catppuccin_macchiato-zsh-syntax-highlighting.zsh:THEME_LOADED zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:SYNTAX_LOADED"
+LE_ALL_PLUGINS="zsh-autosuggestions:zsh-autosuggestions.zsh:AS_LOADED zsh-history-substring-search:zsh-history-substring-search.zsh:HS_LOADED zsh-syntax-highlighting:zsh-syntax-highlighting.zsh:SYNTAX_LOADED"
 LE_ALL_TOOLS=$CORE_TOOLS
 LE_FZF_INIT='bindkey "^R" fzf-history-widget; bindkey "^T" fzf-file-widget; bindkey "^[c" fzf-cd-widget'
 LE_KEYS='for k in "^I" "^[[Z" "^[[A" "^[OA" "^[[B" "^[OB" "^F" "^[f" "^R" "^T" "^[c"; do bindkey "$k"; done'
@@ -30,7 +30,7 @@ scenario_le_ghost_style() {
     reset_session; SESSION_TOOLS=$LE_ALL_TOOLS; SESSION_PLUGINS=$LE_ALL_PLUGINS
     session server 'echo "style=$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE"; echo "strategy=$ZSH_AUTOSUGGEST_STRATEGY"'
     assert_empty "$ERR"
-    assert_line "$OUT" 'style=fg=#8087a2'
+    assert_line "$OUT" 'style=fg=8'
     assert_line "$OUT" 'strategy=history'
 }
 
@@ -67,6 +67,40 @@ scenario_le_syntax_last() {
     reset_session; SESSION_TOOLS=$LE_ALL_TOOLS; SESSION_PLUGINS=$LE_ALL_PLUGINS
     session devbox 'echo "order=$ORDER"; echo "hl=$ZSH_HIGHLIGHT_HIGHLIGHTERS"'
     assert_empty "$ERR"
-    assert_line "$OUT" 'order=zsh-autosuggestions,zsh-history-substring-search,catppuccin-zsh-syntax-highlighting,zsh-syntax-highlighting,'
+    assert_line "$OUT" 'order=zsh-autosuggestions,zsh-history-substring-search,zsh-syntax-highlighting,'
     assert_line "$OUT" 'hl=main'
+}
+
+# tests/syntax-colors.txt (shared with Contract.Tests.ps1): every zsh style it
+# names holds fg=<its color>, with bright colors as fg=8..fg=15.
+scenario_le_syntax_colors() {
+    local names=(black red green yellow blue magenta cyan white)
+    local rows token color _ps keys key i fg probe=''
+    rows=$(tr -d '\r' < "$REPO_ROOT/tests/syntax-colors.txt" | grep -v -e '^#' -e '^$')
+    [ -n "$rows" ] || fail 'no rows in syntax-colors.txt'
+    while IFS='|' read -r token color _ps keys; do
+        for key in ${keys//,/ }; do
+            if [ "$key" = ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE ]; then
+                probe+="echo \"S:$key=\$$key\"; "
+            else
+                probe+="echo \"S:$key=\$ZSH_HIGHLIGHT_STYLES[$key]\"; "
+            fi
+        done
+    done <<< "$rows"
+    reset_session; SESSION_TOOLS=$LE_ALL_TOOLS; SESSION_PLUGINS=$LE_ALL_PLUGINS
+    session devbox "$probe"
+    assert_empty "$ERR"
+    while IFS='|' read -r token color _ps keys; do
+        fg=''
+        for i in "${!names[@]}"; do
+            [ "$color" = "${names[$i]}" ] && fg=$i
+            [ "$color" = "bright-${names[$i]}" ] && fg=$((i + 8))
+        done
+        case "$fg" in [0-9]*) ;; *) fail "$token: $color is not one of the sixteen" ;; esac
+        [ "$fg" -lt 8 ] && fg=${names[$fg]}
+        for key in ${keys//,/ }; do
+            grep -qE "^S:$key=(.*,)?fg=$fg(,.*)?$" <<< "$OUT" ||
+                fail "$token: $key is not fg=$fg; output was: $OUT"
+        done
+    done <<< "$rows"
 }
