@@ -11,5 +11,5 @@ The design is decided and built. Before changing a design decision, read why it 
 ## Agent skills
 
 - Issue tracker: GitHub Issues (mookeyj79/Nowhere) via `gh`. See `docs/agents/issue-tracker.md`.
-- Triage labels: see `docs/agents/triage-labels.md`.
-- Domain docs: single-context, `GLOSSARY.md` and `docs/adr/` at the root. See `docs/agents/domain.md`.
+- Triage labels: see `../docs/agents/triage-labels.md`.
+- Domain docs: single-context, `GLOSSARY.md` and `docs/adr/` at the root. See `../docs/agents/domain.md`.
