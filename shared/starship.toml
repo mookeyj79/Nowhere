@@ -1,5 +1,7 @@
 # =============================================================================
-#  starship.toml — Catppuccin
+#  starship.toml
+#  Colors are the terminal's sixteen, by name, so the prompt follows the
+#  terminal's theme. Text on a colored segment is black.
 #  Docs: https://starship.rs/config/
 # =============================================================================
 
@@ -10,9 +12,9 @@ format = """
 $os\
 $username\
 $hostname\
-[](bg:peach fg:red)\
+[](bg:blue fg:red)\
 $directory\
-[](bg:yellow fg:peach)\
+[](bg:yellow fg:blue)\
 $git_branch\
 $git_status\
 [](fg:yellow bg:green)\
@@ -31,15 +33,13 @@ $python\
 $helm\
 $terraform\
 $aws\
-[](fg:green bg:lavender)\
+[](fg:green bg:purple)\
 $time\
-[ ](fg:lavender)\
+[ ](fg:purple)\
 [](reset)\
 $cmd_duration\
 $line_break\
 $character"""
-
-palette = 'catppuccin_macchiato'
 
 # =============================================================================
 #  OS icon — Windows  Linux  macOS glyph (requires Nerd Font)
@@ -47,7 +47,7 @@ palette = 'catppuccin_macchiato'
 
 [os]
 disabled = false
-style    = "bg:red fg:crust"
+style    = "bg:red fg:black"
 
 [os.symbols]
 Windows          = ""
@@ -78,13 +78,13 @@ RedHatEnterprise = "󱄛"
 [username]
 format      = '[ $user]($style)'
 show_always = true
-style_user  = "bg:red fg:crust"
-style_root  = "bg:red fg:crust"
+style_user  = "bg:red fg:black"
+style_root  = "bg:red fg:black"
 
 [hostname]
 format   = "[@]($style)[$hostname]($style)"
 ssh_only = true
-style    = "bg:red fg:crust"
+style    = "bg:red fg:black"
 
 # =============================================================================
 #  Directory
@@ -94,7 +94,7 @@ style    = "bg:red fg:crust"
 format            = "[ $path ]($style)[$read_only]($style)"
 home_symbol       = "󱂶 "
 read_only         = "󰌾 "
-style             = "bg:peach fg:crust"
+style             = "bg:blue fg:black"
 truncation_length = 3
 truncation_symbol = "…/"
 
@@ -111,24 +111,24 @@ truncation_symbol = "…/"
 # =============================================================================
 
 [git_branch]
-format = '[[ $symbol $branch ](fg:crust bg:yellow)]($style)'
+format = '[[ $symbol $branch ](fg:black bg:yellow)]($style)'
 style  = "bg:yellow"
 symbol = ""
 
 [git_status]
 ahead      = ' ahead=${count}'
 behind     = ' behind=${count}'
-conflicted = '[ conflicted=${count}](fg:crust bg:yellow) '
-deleted    = '[󰍶 deleted=${count}](fg:crust bg:yellow) '
+conflicted = '[ conflicted=${count}](fg:black bg:yellow) '
+deleted    = '[󰍶 deleted=${count}](fg:black bg:yellow) '
 diverged   = ' ahead=${ahead_count}  behind=${behind_count}'
-format     = '[[\( ($all_status$ahead_behind\))](fg:crust bg:yellow)]($style)'
-modified   = '[󰛿 modified=${count}](fg:crust bg:yellow) '
-renamed    = '[󱍸 renamed=${count}](fg:crust bg:yellow) '
-staged     = '[󰐗 staged=${count}](fg:crust bg:yellow) '
-stashed    = '[ stashed=${count}](fg:crust bg:yellow) '
+format     = '[[\( ($all_status$ahead_behind\))](fg:black bg:yellow)]($style)'
+modified   = '[󰛿 modified=${count}](fg:black bg:yellow) '
+renamed    = '[󱍸 renamed=${count}](fg:black bg:yellow) '
+staged     = '[󰐗 staged=${count}](fg:black bg:yellow) '
+stashed    = '[ stashed=${count}](fg:black bg:yellow) '
 style      = "bg:yellow"
-up_to_date = '[󰘽 up-to-date](fg:crust bg:yellow) '
-untracked  = '[󰋗 untracked=${count}](fg:crust bg:yellow) '
+up_to_date = '[󰘽 up-to-date](fg:black bg:yellow) '
+untracked  = '[󰋗 untracked=${count}](fg:black bg:yellow) '
 
 # =============================================================================
 #  Kubernetes
@@ -139,7 +139,7 @@ disabled          = false
 detect_files      = ["*.yaml", "*.yml", "helmfile.yaml", "kustomization.yaml",
                      "Chart.yaml", ".helmignore"]
 detect_folders    = [".kube", "k8s", "kubernetes", "helm", "charts", "manifests"]
-format            = '[[ $symbol$context( \($namespace\)) ](fg:crust bg:green)]($style)'
+format            = '[[ $symbol$context( \($namespace\)) ](fg:black bg:green)]($style)'
 style             = "bg:green"
 symbol            = "󱃾 "
 
@@ -160,9 +160,9 @@ symbol         = "⎈ "
 # =============================================================================
 
 [docker_context]
-format          = '[[ $symbol( $context) ](fg:crust bg:sapphire)]($style)'
+format          = '[[ $symbol( $context) ](fg:black bg:cyan)]($style)'
 only_with_files = true
-style           = "bg:sapphire"
+style           = "bg:cyan"
 symbol          = ""
 
 # =============================================================================
@@ -170,7 +170,7 @@ symbol          = ""
 # =============================================================================
 
 [terraform]
-format = '[[ $symbol$workspace ](fg:crust bg:green)]($style)'
+format = '[[ $symbol$workspace ](fg:black bg:green)]($style)'
 style  = "bg:green"
 symbol = "󱁢 "
 
@@ -180,7 +180,7 @@ symbol = "󱁢 "
 
 [aws]
 force_display = false
-format        = "[[ $symbol$profile(\\($region\\))](fg:crust bg:green)]($style) "
+format        = "[[ $symbol$profile(\\($region\\))](fg:black bg:green)]($style) "
 style         = "bg:green"
 symbol        = " "
 
@@ -192,51 +192,51 @@ symbol        = " "
 detect_extensions = ["js", "mjs", "cjs", "ts", "mts", "cts"]
 detect_files      = ["package.json", ".nvmrc", ".node-version"]
 detect_folders    = ["node_modules"]
-format            = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+format            = '[[ $symbol( $version) ](fg:black bg:green)]($style)'
 style             = "bg:green"
 symbol            = ""
 
 [bun]
-format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+format = '[[ $symbol( $version) ](fg:black bg:green)]($style)'
 style  = "bg:green"
 symbol = ""
 
 [c]
-format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+format = '[[ $symbol( $version) ](fg:black bg:green)]($style)'
 style  = "bg:green"
 symbol = " "
 
 [rust]
 detect_extensions = ["rs"]
 detect_files      = ["Cargo.toml", "Cargo.lock"]
-format            = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+format            = '[[ $symbol( $version) ](fg:black bg:green)]($style)'
 style             = "bg:green"
 symbol            = ""
 
 [golang]
 detect_extensions = ["go"]
 detect_files      = ["go.mod", "go.sum", "go.work"]
-format            = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+format            = '[[ $symbol( $version) ](fg:black bg:green)]($style)'
 style             = "bg:green"
 symbol            = ""
 
 [php]
-format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+format = '[[ $symbol( $version) ](fg:black bg:green)]($style)'
 style  = "bg:green"
 symbol = ""
 
 [java]
-format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+format = '[[ $symbol( $version) ](fg:black bg:green)]($style)'
 style  = "bg:green"
 symbol = " "
 
 [kotlin]
-format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+format = '[[ $symbol( $version) ](fg:black bg:green)]($style)'
 style  = "bg:green"
 symbol = ""
 
 [haskell]
-format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+format = '[[ $symbol( $version) ](fg:black bg:green)]($style)'
 style  = "bg:green"
 symbol = ""
 
@@ -246,7 +246,7 @@ detect_extensions  = ["py"]
 detect_files       = [".python-version", "requirements.txt", "pyproject.toml",
                       "setup.py", "setup.cfg", "Pipfile", "tox.ini"]
 detect_folders     = [".venv", "venv", ".tox"]
-format             = '[[ $symbol( $version)(\(#$virtualenv\)) ](fg:crust bg:green)]($style)'
+format             = '[[ $symbol( $version)(\(#$virtualenv\)) ](fg:black bg:green)]($style)'
 style              = "bg:green"
 symbol             = ""
 
@@ -256,8 +256,8 @@ symbol             = ""
 
 [time]
 disabled    = false
-format      = '[[  $time ](fg:crust bg:lavender)]($style)'
-style       = "bg:lavender"
+format      = '[[  $time ](fg:black bg:purple)]($style)'
+style       = "bg:purple"
 time_format = "%R"
 
 [line_break]
@@ -267,8 +267,8 @@ disabled = false
 disabled = false
 error_symbol = '[❯](bold fg:red)'
 success_symbol = '[❯](bold fg:green)'
-vimcmd_replace_one_symbol = '[❮](bold fg:lavender)'
-vimcmd_replace_symbol = '[❮](bold fg:lavender)'
+vimcmd_replace_one_symbol = '[❮](bold fg:purple)'
+vimcmd_replace_symbol = '[❮](bold fg:purple)'
 vimcmd_symbol = '[❮](bold fg:green)'
 vimcmd_visual_symbol = '[❮](bold fg:yellow)'
 
@@ -278,36 +278,4 @@ format = " in $duration "
 min_time_to_notify = 45000
 show_milliseconds = true
 show_notifications = true
-style = "bg:lavender"
-
-# =============================================================================
-#  Catppuccin Macchiato palette (the only flavour)
-# =============================================================================
-
-[palettes.catppuccin_macchiato]
-rosewater = "#f4dbd6"
-flamingo = "#f0c6c6"
-pink = "#f5bde6"
-mauve = "#c6a0f6"
-red = "#ed8796"
-maroon = "#ee99a0"
-peach = "#f5a97f"
-yellow = "#eed49f"
-green = "#a6da95"
-teal = "#8bd5ca"
-sky = "#91d7e3"
-sapphire = "#7dc4e4"
-blue = "#8aadf4"
-lavender = "#b7bdf8"
-text = "#cad3f5"
-subtext1 = "#b8c0e0"
-subtext0 = "#a5adcb"
-overlay2 = "#939ab7"
-overlay1 = "#8087a2"
-overlay0 = "#6e738d"
-surface2 = "#5b6078"
-surface1 = "#494d64"
-surface0 = "#363a4f"
-base = "#24273a"
-mantle = "#1e2030"
-crust = "#181926"
+style = "bg:purple"

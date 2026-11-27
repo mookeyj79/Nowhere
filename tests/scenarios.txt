@@ -9,8 +9,13 @@
 # tests/powershell/Parity.Tests.ps1 checks the same records and that every
 # named test and file exists, here and in tests/zsh/scenarios-*.txt.
 # Checks that both shells share (role gating, the local override, tool guards,
-# the missing-tools hint) are rows of tests/parity.txt, not lines here.
+# the missing-tools hint) are rows of tests/parity.txt, not lines here. The
+# theme-file lines are the exception: they check output and styles, which a
+# parity check cannot express (parity.txt has the shared theme-wins row).
 local-nowhere-home|zsh|profile.ps1: NOWHERE_HOME default|override can set NOWHERE_HOME; default is the clone
+theme-file-sourced|both|Profile.Tests: theme file / is sourced when present|theme.zsh is sourced; a clean start prints only what it prints
+theme-file-last|both|Profile.Tests: theme file / loads after conf.d|a style the theme file sets beats the conf.d one
+theme-file-absent|both|Profile.Tests: theme file / is optional|no theme file: a clean start prints nothing
 plugin-skip|zsh|n/a (modules are pinned PowerShell modules)|missing plugins are skipped silently with one hint
 plugin-load|zsh|n/a|plugins load from the plugin directory in conf.d order
 boot-reject-role|both|Bootstrap.Tests: role argument|invalid role changes nothing

@@ -10,6 +10,9 @@
 # local  : the local override: - for no file, empty for an empty file, or
 #          Name=value pairs joined by ; (each shell writes them in its own
 #          syntax: Name='value' in local.zsh, $Name = 'value' in local.ps1)
+#          or theme: followed by such pairs (or nothing) for the theme file
+#          instead, each an environment variable (export Name='value' in
+#          theme.zsh, $env:Name = 'value' in theme.ps1), and no local override
 # check  : cmd   arg=command name; expect present|absent (alias, function or command)
 #          env   arg=variable name; expect its value
 #          hint  arg=-; expect number of "run bootstrap" hint lines on startup
@@ -74,3 +77,8 @@ local-empty|both|server|-|empty|env|EDITOR|nano
 missing-silent-devbox|both|devbox|-|-|hint|-|1
 missing-silent-server|both|server|-|-|hint|-|1
 complete-no-hint|both|server|core|-|hint|-|0
+# Theme file: optional, and sourced after conf.d, so its values beat conf.d's.
+# Every other row runs with no theme file, so its absence is checked by every
+# session starting cleanly.
+theme-wins|both|devbox|-|theme:EDITOR=vim|env|EDITOR|vim
+theme-empty|both|server|-|theme:|env|EDITOR|nano

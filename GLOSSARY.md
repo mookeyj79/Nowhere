@@ -9,7 +9,7 @@ What a machine is for: DevBox or Server, on Windows or Linux. Four roles in all.
 _Avoid_: machine type, profile type
 
 **Core**:
-The layer of tools, aliases, keybindings and theme shared by all four roles.
+The layer of tools, aliases and keybindings shared by all four roles.
 _Avoid_: base, common
 
 **Dev layer**:
@@ -44,6 +44,10 @@ _Avoid_: required tools, hint list
 The per-machine file, kept outside the repo, holding values that differ on one machine, such as paths, a WSL distro or a token. Never committed; the repo ships only an `.example` of it.
 _Avoid_: local config, env file
 
+**Theme file**:
+The optional per-machine file, kept outside the repo next to the local override, that a terminal theme supplies to refine the shell's colors. Sourced after every conf.d file, so its values win. Nowhere ships none and never creates one.
+_Avoid_: theme, color config
+
 **Stub**:
 The few-line file at a shell's own startup path (`$PROFILE`, `~/.zshrc`) that sources the profile from the repo clone.
 _Avoid_: shim, wrapper
@@ -53,7 +57,7 @@ The numbered directory of small profile files (`core/conf.d`, `dev/conf.d`) that
 _Avoid_: profile.d, includes
 
 **Parity list**:
-`tests/parity.txt`, the single list of core command names and key behaviours (tool guards, role gating, `EDITOR` defaults, the local override, missing-tool silence) that both the Pester and zsh suites read, so the four roles are checked against one definition of "feels the same".
+`tests/parity.txt`, the single list of core command names and key behaviours (tool guards, role gating, `EDITOR` defaults, the local override, the theme file, missing-tool silence) that both the Pester and zsh suites read, so the four roles are checked against one definition of "feels the same".
 _Avoid_: scenario copy, mirror tests
 
 **Server MOTD**:

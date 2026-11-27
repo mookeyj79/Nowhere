@@ -5,7 +5,8 @@
 #  (devbox | server) and sources this file from the clone.
 #
 #  Order: local override first (~/.config/nowhere/local.zsh), then core/conf.d
-#  merged with dev/conf.d (devbox only) in one filename order. Every value the
+#  merged with dev/conf.d (devbox only) in one filename order, then the theme
+#  file (~/.config/nowhere/theme.zsh) if there is one. Every value the
 #  override can set is read with a default, so a missing override still works.
 # =============================================================================
 
@@ -34,6 +35,12 @@ done
 for _entry in ${(o)_entries}; do
     source ${_entry#*|}
 done
+
+# --- Theme file ---------------------------------------------------------------
+#  Optional, never shipped or seeded: a terminal theme's own colors for the shell
+#  (highlight styles, ghost text, tool variables, STARSHIP_CONFIG). Last, so its
+#  values win over conf.d.
+[[ -r $HOME/.config/nowhere/theme.zsh ]] && source $HOME/.config/nowhere/theme.zsh
 
 # --- The one hint --------------------------------------------------------------
 nowhere_hint_flush
