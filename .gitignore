@@ -11,3 +11,7 @@ coverage.xml
 # uv: local virtualenv and lockfile
 .venv/
 uv.lock
+
+# Claude Code: per-machine settings and agent worktrees
+.claude/settings.local.json
+.claude/worktrees/

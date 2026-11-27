@@ -33,7 +33,7 @@ The sandboxed suites (`tests/`) prove the files and the shared parity list. They
 - [ ] `$PROFILE` stub sets `NOWHERE_ROLE = 'server'`; dev aliases (`topl`, `tfp`, `kgp`, `dcup`) are absent.
 - [ ] On Server 2022 or older: bootstrap warned about winget, listed the tools to install by hand, and still finished uv, `server-motd`, stub and override.
 - [ ] `server-motd` is on PATH at the pinned version (`uv tool list`). `%ProgramData%\server-motd\config.toml` exists, owner-only.
-- [ ] The MOTD banner prints on login in an interactive session. Note whether it also prints in a non-interactive SSH command (known follow-up, see map #1).
+- [ ] The MOTD banner prints on login in an interactive session, and not in the output of a non-interactive SSH command (`ssh host Get-Date`).
 - [ ] Over SSH (OpenSSH with PowerShell as DefaultShell) the same banner and prompt appear.
 - [ ] `update` runs Windows Update, winget (if present) and the pins (server-motd at its pin) only; `update -WSL` and `-DiskCleanup` are opt-in.
 - [ ] `server-motd install-profile` was not run, and the profile contains exactly one MOTD hook (no double banner).
