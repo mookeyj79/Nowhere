@@ -12,6 +12,10 @@
 # would then reinstall the tool). The rule is uvtool-pin.sh on Linux and
 # UvToolPin.ps1 (through pwsh) on Windows.
 #
+# For server-motd it also validates the config bootstrap seeds
+# (shared/server-motd/config.toml.example) with the pinned server-motd's
+# `check --no-probe`, so a pin move that changes the schema fails here.
+#
 # Needs uv, jq and bash; pwsh on Windows.
 # Usage: sh tests/uvtools-smoke.sh
 set -eu
@@ -64,6 +68,11 @@ while IFS="$(printf '\t')" read -r name spec; do
         echo "pins wrongly takes $other as installed; uv tool list printed:" >&2
         cat "$tmp/listing" >&2
         exit 1
+    fi
+    if [ "$name" = server-motd ]; then
+        example="$root/shared/server-motd/config.toml.example"
+        if $windows; then example=$(cygpath -w "$example"); fi
+        "$UV_TOOL_BIN_DIR/$name" --config "$example" check --no-probe
     fi
     echo "ok   $name (installed, runs, recognised at its pin)"
 done < "$tmp/specs"
