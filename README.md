@@ -29,13 +29,15 @@ The same commands in both shells, on every role:
 
 ## Roles
 
-Four roles: Windows DevBox, Windows Server, Linux DevBox, Linux Server. A **core** layer is shared by all four; the **dev layer** is added only on a DevBox. Servers also get the `server-motd` login banner.
+Six roles: DevBox, User and Server, each on Windows or Linux. A **core** layer is shared by all six; the **dev layer** is added only on a DevBox. Servers also get the `server-motd` login banner. A User machine is an everyday desktop or laptop that is not a DevBox: core only, no MOTD.
 
 | Role | Shell | Layers | Bootstrap | `EDITOR` | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Windows DevBox | PowerShell 7 | core + dev | `bootstrap/bootstrap.ps1 devbox` | `code --wait` | kubectl/helm/docker/terraform/tofu aliases, Ansible via WSL |
+| Windows User | PowerShell 7 | core | `bootstrap/bootstrap.ps1 user` | `nano` | `update` = every step but WSL |
 | Windows Server | PowerShell 7 | core | `bootstrap/bootstrap.ps1 server` | `nano` | `server-motd` at login, `update` = Windows Update, winget and pins |
 | Linux DevBox | ZSH | core + dev | `bootstrap/bootstrap.sh devbox` | `code --wait` | dev aliases, tools guarded by presence |
+| Linux User | ZSH | core | `bootstrap/bootstrap.sh user` | `nano` | the same `update` as every Linux role |
 | Linux Server | ZSH | core | `bootstrap/bootstrap.sh server` | `nano` | `server-motd` via the root `update-motd.d` hook |
 
 The role is set by the stub (below). A missing or unknown role behaves as `server`. Linux support: Debian 13+ and Ubuntu 24.04+.
@@ -46,12 +48,12 @@ Clone the repo anywhere, then run the bootstrap for the machine's role. It is id
 
 ```powershell
 # Windows (PowerShell 7, from the clone)
-pwsh -File bootstrap/bootstrap.ps1 devbox     # or: server
+pwsh -File bootstrap/bootstrap.ps1 devbox     # or: user, server
 ```
 
 ```sh
 # Linux (Debian/Ubuntu, from the clone)
-bash bootstrap/bootstrap.sh devbox            # or: server
+bash bootstrap/bootstrap.sh devbox            # or: user, server
 ```
 
 Bootstrap installs tools from `shared/tools.json` (winget on Windows, apt plus checksum-pinned release binaries on Linux: starship, carapace and gitleaks, and on a devbox helm, terraform and tofu; core always, dev tools on a devbox). It installs `uv` with Astral's official installer if absent, installs pinned PowerShell modules or ZSH plugins, writes the **stub**, seeds the **local override**, points `core.hooksPath` at `.githooks` (the gitleaks pre-commit hook), and on a server installs `server-motd`. The header of each bootstrap script lists its exact steps. Open a new shell afterwards.
@@ -81,7 +83,7 @@ conf.d numbering (same on both shells): `00` environment, `10` line editor, `20`
 
 ## Stub and local override
 
-- **Stub**: a few lines at `$PROFILE` (PowerShell) or `~/.zshrc` (ZSH) that set `NOWHERE_ROLE` (`devbox` or `server`) and source the profile from the clone. Bootstrap writes it and backs up a different existing one.
+- **Stub**: a few lines at `$PROFILE` (PowerShell) or `~/.zshrc` (ZSH) that set `NOWHERE_ROLE` (`devbox`, `user` or `server`) and source the profile from the clone. Bootstrap writes it and backs up a different existing one.
 - **Local override**: `~/.config/nowhere/local.ps1` or `local.zsh`, outside the repo and never committed, sourced before any conf.d file. It holds machine-specific values: `NOWHERE_HOME`, the editor, `goto` bookmarks, the WSL distro, tokens. Every key is optional and read with a default. Bootstrap seeds it from `local.ps1.example` / `local.zsh.example` with owner-only permissions and never overwrites it.
 
 ## Colors and the theme file
@@ -99,11 +101,11 @@ Servers show `server-motd`, installed from a pinned commit of its repo with `uv 
 - Windows Server: the PowerShell profile (`60-motd.ps1`) runs it on the `server` role, in interactive login sessions only: `ssh host cmd` (`pwsh -c`), Ansible (`-NonInteractive -EncodedCommand`), `-File` scripts and redirected output never get the banner in their output. Config at `%ProgramData%\server-motd\config.toml`.
 - Linux Server: bootstrap writes `/etc/update-motd.d/50-server-motd`, which runs the binary by absolute path. Config at `/etc/server-motd/config.toml`. The ZSH profile never calls it. `server-motd` is installed system-wide with sudo (`UV_TOOL_DIR=/opt/nowhere/uv-tools`, binary in `/usr/local/bin`, both root-owned). If the binary is missing, the hook exits quietly and the login goes on.
 
-Both configs are seeded from `shared/server-motd/config.toml.example`, mode owner-only, never overwritten. DevBoxes never show the MOTD.
+Both configs are seeded from `shared/server-motd/config.toml.example`, mode owner-only, never overwritten. DevBoxes and User machines never show the MOTD.
 
 ## `update`
 
-The one maintenance name on every role. On Windows it runs `Update-System`, which needs an elevated session: Windows Update, winget, Tools (`uv self update`, then pins: uv tools and PowerShell modules), WSL, and disk cleanup. Switches (`-Windows`, `-Winget`, `-Tools`, `-WSL`, `-DiskCleanup`) pick individual steps. On a server a bare `update` runs Windows Update, Tools, and winget where it exists; WSL and disk cleanup stay available as explicit switches. `Update-PSProfile` runs only the pins and needs no elevation. On Linux it runs `zsh/core/bin/update`: apt, then pins (release binaries, uv tools, ZSH plugins), then `uv self update`. It is the only thing besides bootstrap that installs or upgrades, and it never moves anything past its pin.
+The one maintenance name on every role. On Windows it runs `Update-System`, which needs an elevated session: Windows Update, winget, Tools (`uv self update`, then pins: uv tools and PowerShell modules), WSL, and disk cleanup. Switches (`-Windows`, `-Winget`, `-Tools`, `-WSL`, `-DiskCleanup`) pick individual steps. On a User machine a bare `update` runs every step but WSL. On a server it runs Windows Update, Tools, and winget where it exists. The steps a bare run skips stay available as explicit switches. `Update-PSProfile` runs only the pins and needs no elevation. On Linux it runs `zsh/core/bin/update`: apt, then pins (release binaries, uv tools, ZSH plugins), then `uv self update`. It is the only thing besides bootstrap that installs or upgrades, and it never moves anything past its pin.
 
 ## Tests
 

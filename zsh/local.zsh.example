@@ -8,7 +8,7 @@
 # Where the clone lives (default: the clone this profile is loaded from)
 # export NOWHERE_HOME="$HOME/src/Nowhere"
 
-# Editor override (default: nano on servers, 'code --wait' on devboxes)
+# Editor override (default: nano on servers and user machines, 'code --wait' on devboxes)
 # NowhereEditor='code --wait'
 
 # Extra or overriding `goto` bookmarks (name=path)

@@ -75,8 +75,8 @@ Describe 'Get-NowherePlan' {
         $m = Get-NowherePlan -Role devbox -RepoRoot $script:Fx | Where-Object Kind -eq 'module'
         $m | ForEach-Object { "$($_.Name) $($_.Version)" } | Should -Be @('HaveIt 1.0.0', 'NeedIt 2.0.0')
     }
-    It 'plans the shipped manifests on both roles' {
-        foreach ($role in 'devbox', 'server') {
+    It 'plans the shipped manifests on every role' {
+        foreach ($role in 'devbox', 'user', 'server') {
             $plan = @(Get-NowherePlan -Role $role -RepoRoot $script:RepoRoot)
             $plan.Count | Should -BeGreaterThan 0
             ($plan | Where-Object Kind -eq 'module').Count | Should -BeGreaterThan 0

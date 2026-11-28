@@ -2,7 +2,7 @@
 #  profile.ps1  --  Nowhere PowerShell entry point
 #
 #  Reached through a few-line stub at $PROFILE that sets $env:NOWHERE_ROLE
-#  (devbox | server) and dot-sources this file from the clone.
+#  (devbox | user | server) and dot-sources this file from the clone.
 #
 #  Order: local override first (~/.config/nowhere/local.ps1), then core/conf.d
 #  merged with dev/conf.d (devbox only) in one filename order, then the theme
@@ -12,7 +12,8 @@
 
 $global:NowhereProfileDir = $PSScriptRoot
 $global:NowhereRepoDir    = Split-Path $PSScriptRoot -Parent
-$global:NowhereRole       = if ($env:NOWHERE_ROLE -eq 'devbox') { 'devbox' } else { 'server' }
+# A missing or unknown role behaves as server.
+$global:NowhereRole       = if ($env:NOWHERE_ROLE -in 'devbox', 'user') { $env:NOWHERE_ROLE } else { 'server' }
 
 # --- Local override ---------------------------------------------------------
 $_localOverride = Join-Path $HOME '.config/nowhere/local.ps1'

@@ -22,6 +22,7 @@ boot-reject-role|both|Bootstrap.Tests: role argument|invalid role changes nothin
 boot-manifest-sane|both|Bootstrap.Tests: tool manifest|manifest is well formed and pinned
 boot-tools-devbox|both|Bootstrap.Tests: tool install / devbox|devbox installs core and dev tools
 boot-tools-server|both|Bootstrap.Tests: tool install / server|server installs core only
+boot-tools-user|both|Bootstrap.Tests: tool install / user|user installs core only, and no server-motd, hook or config
 boot-uv|both|Bootstrap.Tests: uv / runs the official installer when uv is absent|uv installer runs once when uv is absent
 boot-uv-present|both|Bootstrap.Tests: uv / does nothing when uv is already on PATH|no uv install when present
 boot-stub|both|Bootstrap.Tests: stub / writes a stub|stub sets the role and sources the clone profile

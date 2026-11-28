@@ -5,7 +5,7 @@
 #  ask for on a role. Reads files only and installs nothing. bootstrap.ps1 and
 #  Sync-Pins.ps1 read this instead of interpreting the manifests themselves.
 #
-#    Get-NowherePlan -Role <devbox|server> -RepoRoot <clone>
+#    Get-NowherePlan -Role <devbox|user|server> -RepoRoot <clone>
 #      one object per planned action, in manifest order:
 #        Kind winget     Name, Id
 #        Kind installer  Name, Installer        (uv: astral)
@@ -17,7 +17,7 @@
 
 function Get-NowherePlan {
     param(
-        [Parameter(Mandatory)] [ValidateSet('devbox', 'server')] [string]$Role,
+        [Parameter(Mandatory)] [ValidateSet('devbox', 'user', 'server')] [string]$Role,
         [Parameter(Mandatory)] [string]$RepoRoot,
         [string]$ToolsPath = (Join-Path $RepoRoot 'shared/tools.json'),
         [string]$ModulesPath = (Join-Path $RepoRoot 'powershell/modules.json')

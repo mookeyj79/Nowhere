@@ -103,6 +103,18 @@ scenario_boot_tools_server() {
     assert_line "$installed" zoxide
     assert_no_line "$installed" gh
 }
+scenario_boot_tools_user() {
+    new_bootstrap_sandbox
+    run_bootstrap user; assert_eq "$BS_CODE" 0 "bootstrap failed: $BS_OUT"
+    local installed
+    installed=$(bs_log installed.txt)
+    assert_line "$installed" zoxide
+    assert_no_line "$installed" gh
+    assert_no_file "$BS_MOTD_DIR/50-server-motd"
+    assert_no_file "$BS_MOTD_CONF/config.toml"
+    assert_eq "$(bs_log uv.log | grep -c 'tool install')" 0 'server-motd installed on user'
+    assert_match "$(cat "$BS_HOME/.zshrc")" "NOWHERE_ROLE='user'"
+}
 scenario_boot_uv() {
     new_bootstrap_sandbox
     run_bootstrap devbox; assert_eq "$BS_CODE" 0 "bootstrap failed: $BS_OUT"

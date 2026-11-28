@@ -122,6 +122,10 @@ Describe 'profile: server-motd at login' {
         $r = Invoke-NowhereSession -Role devbox -Tools 'server-motd' -Probe $script:AsInteractive
         ($r.Output -join "`n") | Should -Not -Match 'server-motd'
     }
+    It 'user never runs it, even when installed' {
+        $r = Invoke-NowhereSession -Role user -Tools 'server-motd' -Probe $script:AsInteractive
+        ($r.Output -join "`n") | Should -Not -Match 'server-motd'
+    }
 }
 
 BeforeDiscovery {

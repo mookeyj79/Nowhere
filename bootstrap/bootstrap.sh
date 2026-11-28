@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  bootstrap.sh <devbox|server>
+#  bootstrap.sh <devbox|user|server>
 #
 #  Readies a Debian/Ubuntu machine for Nowhere. Safe to re-run: every step
 #  checks state first and does nothing when already done.
@@ -26,10 +26,10 @@
 # =============================================================================
 set -euo pipefail
 
-usage() { echo "usage: bootstrap.sh <devbox|server>" >&2; exit 2; }
+usage() { echo "usage: bootstrap.sh <devbox|user|server>" >&2; exit 2; }
 [ $# -eq 1 ] || usage
 ROLE=$1
-case "$ROLE" in devbox | server) ;; *) usage ;; esac
+case "$ROLE" in devbox | user | server) ;; *) usage ;; esac
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 case "$REPO_ROOT" in *"'"*) echo "clone path must not contain a single quote" >&2; exit 1 ;; esac

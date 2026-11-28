@@ -11,7 +11,7 @@ param(
 # ../lib/UpdateSystem.ps1, where tests reach them without admin rights.
 . (Join-Path $PSScriptRoot '../lib/UpdateSystem.ps1')
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
-$Role = if ($global:NowhereRole) { $global:NowhereRole } elseif ($env:NOWHERE_ROLE -eq 'devbox') { 'devbox' } else { 'server' }
+$Role = if ($global:NowhereRole) { $global:NowhereRole } elseif ($env:NOWHERE_ROLE -in 'devbox', 'user') { $env:NOWHERE_ROLE } else { 'server' }
 
 $requested = @($PSBoundParameters.Keys | Where-Object { $PSBoundParameters[$_] })
 $steps = Resolve-UpdateSteps -Role $Role -Requested $requested -HaveWinget ([bool](Get-Command winget -ErrorAction SilentlyContinue))
