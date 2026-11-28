@@ -4,6 +4,29 @@
 
 My personal shell environment: one setup that feels the same on every machine I log into. PowerShell on Windows, ZSH on Linux. Terms are defined in [`GLOSSARY.md`](GLOSSARY.md); the design history and decisions live in the wayfinder map, [issue #1](https://github.com/mookeyj79/Nowhere/issues/1).
 
+- [What you get](#what-you-get)
+- [Roles](#roles)
+- [Setup](#setup)
+- [Layout](#layout)
+- [Stub and local override](#stub-and-local-override)
+- [Colors and the theme file](#colors-and-the-theme-file)
+- [Servers and the MOTD](#servers-and-the-motd)
+- [`update`](#update)
+- [Tests](#tests)
+- [Committing](#committing)
+- [License](#license)
+
+## What you get
+
+The same commands in both shells, on every role:
+
+- **Prompt and tools:** a Starship prompt, zoxide, fzf, eza, bat, ripgrep, fd, carapace completions, and syntax highlighting with autosuggestions.
+- **Profile commands:** `reload`, `editp` (open the clone in `EDITOR`), `aliases [pattern]` and `update`.
+- **Navigation:** `goto <bookmark>` (`goto` alone lists them; add your own in the local override), `mkcd <dir>`, and `..` up to `.....`.
+- **Helpers:** `gcl` (git clone and cd), a curl-backed `wget` where the real one is missing, and git and eza aliases such as `gst`, `gco`, `glog`, `ll`, `la` and `lt`, each only when its tool is installed.
+- **Python virtualenvs (uv-backed):** `mkvirtualenv`, `workon`, `lsvirtualenv`, `rmvirtualenv`, `cdvirtualenv`, `seedvenv`, `pipinstall` and `activate` for project-local `.venv` folders.
+- **DevBox only:** kubectl, helm, docker compose and terraform/tofu aliases (`kgp`, `dcup`, `tfp`, `topl`, ...), each guarded by its tool. PowerShell also runs `ansible`, `ansible-playbook` and the other Ansible commands through WSL.
+
 ## Roles
 
 Four roles: Windows DevBox, Windows Server, Linux DevBox, Linux Server. A **core** layer is shared by all four; the **dev layer** is added only on a DevBox. Servers also get the `server-motd` login banner.
@@ -33,7 +56,7 @@ bash bootstrap/bootstrap.sh devbox            # or: server
 
 Bootstrap installs tools from `shared/tools.json` (winget on Windows, apt plus checksum-pinned release binaries on Linux: starship, carapace and gitleaks, and on a devbox helm, terraform and tofu; core always, dev tools on a devbox). It installs `uv` with Astral's official installer if absent, installs pinned PowerShell modules or ZSH plugins, writes the **stub**, seeds the **local override**, points `core.hooksPath` at `.githooks` (the gitleaks pre-commit hook), and on a server installs `server-motd`. The header of each bootstrap script lists its exact steps. Open a new shell afterwards.
 
-Two modules in `bootstrap/lib/` do the manifest work for bootstrap and `update` alike. The **install plan** (`plan.sh`, `Plan.ps1`) reads the manifests and lists what a role needs, without installing anything. **Pins** (`pins.sh`, `Sync-Pins.ps1`) bring the machine to every pin in that plan: release binaries, uv tools, ZSH plugins or PowerShell modules. Bootstrap runs pins strictly and stops at the first failure; `update` reports each failure and carries on.
+Bootstrap stops at the first install that fails; `update` reports each failure and carries on.
 
 If a tool, module or plugin is missing, the profile starts silently and prints one hint to run bootstrap.
 
@@ -71,21 +94,21 @@ Machines bootstrapped while Nowhere still shipped Catppuccin colors keep the old
 
 ## Servers and the MOTD
 
-Servers show `server-motd`, installed from a pinned commit of its repo with `uv tool install "server-motd @ git+https://github.com/mookeyj79/Server-MOTD@<commit>"`. The commit pin is in `shared/tools.json` under `uvTools`, and bootstrap and `update` both reinstall when the installed pin differs. `server-motd install-profile` and `uninstall-profile` are not used on Nowhere machines, so the hook has a single owner:
+Servers show `server-motd`, installed from a pinned commit of its repo with `uv tool install "server-motd @ git+https://github.com/mookeyj79/Server-MOTD@<commit>"`. The commit pin is in `shared/tools.json` under `uvTools`, and bootstrap and `update` both reinstall when the installed pin differs. Nowhere owns the login hook, so do not run `server-motd install-profile` or `uninstall-profile` on a Nowhere machine. Where the banner runs:
 
 - Windows Server: the PowerShell profile (`60-motd.ps1`) runs it on the `server` role, in interactive login sessions only: `ssh host cmd` (`pwsh -c`), Ansible (`-NonInteractive -EncodedCommand`), `-File` scripts and redirected output never get the banner in their output. Config at `%ProgramData%\server-motd\config.toml`.
-- Linux Server: bootstrap writes `/etc/update-motd.d/50-server-motd`, which runs the binary by absolute path. Config at `/etc/server-motd/config.toml`. The ZSH profile never calls it. The hook runs as root, so on Linux `server-motd` is installed system-wide with sudo (`UV_TOOL_DIR=/opt/nowhere/uv-tools`, binary in `/usr/local/bin`, both root-owned) instead of under the installing user's home, where root would be running a user-writable file. The hook also exits quietly if the binary is missing, so a broken install cannot break a login.
+- Linux Server: bootstrap writes `/etc/update-motd.d/50-server-motd`, which runs the binary by absolute path. Config at `/etc/server-motd/config.toml`. The ZSH profile never calls it. `server-motd` is installed system-wide with sudo (`UV_TOOL_DIR=/opt/nowhere/uv-tools`, binary in `/usr/local/bin`, both root-owned). If the binary is missing, the hook exits quietly and the login goes on.
 
 Both configs are seeded from `shared/server-motd/config.toml.example`, mode owner-only, never overwritten. DevBoxes never show the MOTD.
 
 ## `update`
 
-The one maintenance name on every role. On Windows it runs `Update-System`, which needs an elevated session: Windows Update, winget, Tools (`uv self update`, then pins: uv tools and PowerShell modules), WSL, and disk cleanup. Switches (`-Windows`, `-Winget`, `-Tools`, `-WSL`, `-DiskCleanup`) pick individual steps. On a server a bare `update` skips WSL and disk cleanup, which stay available as explicit switches. `Update-PSProfile` runs only the pins and needs no elevation. On Linux it runs `zsh/core/bin/update`: apt, then pins (release binaries, uv tools, ZSH plugins), then `uv self update`. It is the only thing besides bootstrap that installs or upgrades, and it never moves anything past its pin.
+The one maintenance name on every role. On Windows it runs `Update-System`, which needs an elevated session: Windows Update, winget, Tools (`uv self update`, then pins: uv tools and PowerShell modules), WSL, and disk cleanup. Switches (`-Windows`, `-Winget`, `-Tools`, `-WSL`, `-DiskCleanup`) pick individual steps. On a server a bare `update` runs Windows Update, Tools, and winget where it exists; WSL and disk cleanup stay available as explicit switches. `Update-PSProfile` runs only the pins and needs no elevation. On Linux it runs `zsh/core/bin/update`: apt, then pins (release binaries, uv tools, ZSH plugins), then `uv self update`. It is the only thing besides bootstrap that installs or upgrades, and it never moves anything past its pin.
 
 ## Tests
 
 - `tests/zsh/run.sh`: real `zsh` against a throwaway HOME with a fake apt/curl. Needs `zsh` and `jq`. Run `bash tests/zsh/run.sh [scenario-id ...]`.
-- `tests/powershell/`: Pester 5.5+ against a real `pwsh` in a throwaway HOME. Run `Invoke-Pester tests/powershell` (slow, several minutes). Pester result files (`testResults.xml`) are git-ignored; CI writes its own to the runner's temp directory.
+- `tests/powershell/`: Pester 5.5+ against a real `pwsh` in a throwaway HOME. Run `Invoke-Pester tests/powershell` (slow, several minutes). Pester result files (`testResults.xml`) are git-ignored.
 - `tests/scenarios.txt` (and `tests/zsh/scenarios-*.txt`) lists the scenario ids and their pwsh counterparts. Before running anything, the zsh harness checks that every line is a well-formed record, no id appears twice, and the index and the `scenario_*` functions match in both directions (`tests/zsh/index.sh`). `Parity.Tests.ps1` checks the same records and that every counterpart it names exists.
 - `tests/parity.txt` is the one list **both** suites read (`Parity.Tests.ps1` and `scenarios-parity.sh`): core command names, tool guards, role gating, `EDITOR` defaults, the local override, the theme file, and missing-tool silence must be identical in pwsh and zsh. Each row picks a role, the tools on PATH (or `core` for a complete install) and a local override (or theme file), then checks a command, a variable or the hint count. Add a line there to extend the parity contract.
 - `tests/syntax-colors.txt` is the other file both suites read: the color name of each token both shells color (command, string, comment, keyword, variable, error, ghost text), checked against PSReadLine (`Contract.Tests.ps1`) and `ZSH_HIGHLIGHT_STYLES` (`scenarios-line-editor.sh`).
