@@ -34,6 +34,6 @@
     { "name": "code",      "layer": "dev", "packages": { "winget": "Microsoft.VisualStudioCode" } }
   ],
   "uvTools": [
-    { "name": "server-motd", "source": "git+https://github.com/mookeyj79/Server-MOTD@c4f34288e886db77bf48ac1c3e875f22866277b9", "roles": ["server"] }
+    { "name": "server-motd", "source": "git+https://github.com/mookeyj79/Server-MOTD@6de531da320f93007e1994b133847550b116106b", "roles": ["server"] }
   ]
 }

@@ -5,9 +5,104 @@
 #   Windows: %ProgramData%\server-motd\config.toml
 #   Linux:   /etc/server-motd/config.toml
 #
-# Placeholder: server-motd's config schema is owned upstream. Replace the body
-# with the upstream example once the pinned release (shared/tools.json, uvTools)
-# documents its keys. May hold API keys and passwords; keep it owner-only.
+# The schema is upstream's: docs/configuration.md and docs/example-config.toml
+# in Server-MOTD, at the commit pinned in shared/tools.json (uvTools). The body
+# below is that example. The modules that work on every Server are on; the
+# OS-specific ones and the service modules are commented out, so a new Server
+# shows no UNAVAILABLE rows until you enable what it runs.
+# Validate with:  server-motd --config <this file> check --no-probe
+# May hold API keys and passwords; keep it owner-only.
+# Secrets use ${ENV_VAR}; use api_key_file / password_file for a file instead.
+# The Linux login hook does not inherit your shell environment, so there prefer
+# a file or an inline value.
 
-# [motd]
-# banner_title = "Server1"
+# title = "media-box" # banner text; defaults to the hostname
+box = "single"        # single | double | rounded | ascii
+
+# --- System modules (warn/crit are optional thresholds) ---------------------
+
+[[modules]]
+kind = "ips"
+
+[[modules]]
+kind = "uptime"
+
+# [[modules]]
+# kind = "load"   # Linux only; use "cpu" on Windows
+# warn = 0.7      # per core, 1-minute average
+# crit = 1.0
+
+[[modules]]
+kind = "cpu"
+warn = 80       # percent
+crit = 95
+
+[[modules]]
+kind = "memory"
+warn = 80       # percent of RAM used
+crit = 95
+
+[[modules]]
+kind = "disks"
+warn = 80       # percent used, per filesystem
+crit = 90
+
+[[modules]]
+kind = "logins"
+warn = 3        # session count
+
+[[modules]]
+kind = "processes"
+warn = 400      # process count
+
+# [[modules]]
+# kind = "updates"  # Ubuntu (update-notifier-common); paths below are the defaults
+# updates_file = "/var/lib/update-notifier/updates-available"
+# reboot_file = "/var/run/reboot-required"
+
+# --- Service modules (several instances of a kind are allowed) --------------
+
+# [[modules]]
+# kind = "tautulli"
+# url = "http://localhost:8181"
+# api_key = "${TAUTULLI_API_KEY}"
+
+# [[modules]]
+# kind = "qbittorrent"
+# url = "http://localhost:8080"
+# username = "admin"                 # optional
+# password = "${QBIT_PASSWORD}"      # optional
+
+# [[modules]]
+# kind = "sabnzbd"
+# url = "http://localhost:8085"
+# api_key = "${SABNZBD_API_KEY}"
+
+# [[modules]]
+# kind = "rtorrent"
+# scgi = "127.0.0.1:5000"            # host:port or unix:/path/to/socket
+
+# [[modules]]
+# kind = "sonarr"
+# name = "Sonarr"
+# url = "http://localhost:8989"
+# api_key = "${SONARR_API_KEY}"
+# warn = 10          # Missing count
+# crit = 50
+# calendar_days = 7
+
+# [[modules]]
+# kind = "sonarr"    # a second instance needs its own name
+# name = "Sonarr 4K"
+# url = "http://localhost:8990"
+# api_key = "${SONARR_4K_API_KEY}"
+
+# [[modules]]
+# kind = "radarr"
+# url = "http://localhost:7878"
+# api_key = "${RADARR_API_KEY}"
+
+# [[modules]]
+# kind = "lidarr"
+# url = "http://localhost:8686"
+# api_key = "${LIDARR_API_KEY}"
