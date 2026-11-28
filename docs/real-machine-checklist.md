@@ -61,7 +61,7 @@ The sandboxed suites (`tests/`) prove the files and the shared parity list. They
 - [ ] No dev tools were installed (no helm, terraform or tofu in `~/.local/bin`) and no `server-motd`, `/etc/update-motd.d/50-server-motd` or `/etc/server-motd`.
 - [ ] `update` runs apt, brings release binaries and plugins to their pins, and runs `uv self update`.
 - [ ] No MOTD banner from Nowhere is shown.
-- [ ] On Linux Mint 22 (Ubuntu 24.04 based, not yet supported): bootstrap and `bash tests/zsh/run.sh` pass. Once they do, add Mint to the supported list in the README and `shared/tools.json`.
+- [ ] On Linux Mint 22 (Ubuntu 24.04 based, not yet supported): bootstrap and `bash tests/zsh/run.sh` pass.
 
 ## Linux Server
 

@@ -75,7 +75,7 @@ Windows Server 2022 and older have no winget: bootstrap warns, skips only the co
 | `zsh/` | The same shape: `profile.zsh`, `core/` and `dev/` with `conf.d/`, `core/bin/` (`update`), `plugins.json` (plugins pinned by SHA, no plugin manager), `local.zsh.example` |
 | `bootstrap/` | `bootstrap.ps1` (Windows), `bootstrap.sh` (Linux), and `lib/` with the install plan and pins for each OS |
 | `tests/` | Sandboxed suites for both shells, the shared parity list and the shared syntax colors (see Tests) |
-| `docs/` | Agent docs and the [real-machine checklist](docs/real-machine-checklist.md) |
+| `docs/` | Design decisions as ADRs (`adr/`), agent docs (`agents/`) and the [real-machine checklist](docs/real-machine-checklist.md) |
 | `scripts/` | Wayfinder helpers for the issue map: `add-blocker.sh`, `frontier.sh`, `map-append.sh`, `resolve.sh` |
 | `.githooks/`, `.github/` | gitleaks pre-commit hook; CI (gitleaks, shellcheck, Pester, zsh harness) |
 
@@ -101,7 +101,7 @@ Servers show `server-motd`, installed from a pinned commit of its repo with `uv 
 - Windows Server: the PowerShell profile (`60-motd.ps1`) runs it on the `server` role, in interactive login sessions only: `ssh host cmd` (`pwsh -c`), Ansible (`-NonInteractive -EncodedCommand`), `-File` scripts and redirected output never get the banner in their output. Config at `%ProgramData%\server-motd\config.toml`.
 - Linux Server: bootstrap writes `/etc/update-motd.d/50-server-motd`, which runs the binary by absolute path. Config at `/etc/server-motd/config.toml`. The ZSH profile never calls it. `server-motd` is installed system-wide with sudo (`UV_TOOL_DIR=/opt/nowhere/uv-tools`, binary in `/usr/local/bin`, both root-owned). If the binary is missing, the hook exits quietly and the login goes on.
 
-Both configs are seeded from `shared/server-motd/config.toml.example`, mode owner-only, never overwritten. DevBoxes and User machines never show the MOTD.
+Both configs are seeded from `shared/server-motd/config.toml.example`, mode owner-only, never overwritten. The seed is upstream's example config: the modules that work on every Server (IPs, uptime, CPU, memory, disks, logins, processes) are on, and `load` (Linux only), `updates` (Ubuntu only) and the service modules (Tautulli, qBittorrent, SABnzbd, rTorrent, Sonarr, Radarr, Lidarr) are there commented out. Uncomment what the Server runs, then check it with `server-motd --config <path> check --no-probe`. The keys are documented in Server-MOTD's [configuration reference](https://github.com/mookeyj79/Server-MOTD/blob/main/docs/configuration.md). On Windows, a per-user `%APPDATA%\server-motd\config.toml` takes precedence over the seeded one. DevBoxes and User machines never show the MOTD.
 
 ## `update`
 
@@ -114,7 +114,7 @@ The one maintenance name on every role. On Windows it runs `Update-System`, whic
 - `tests/scenarios.txt` (and `tests/zsh/scenarios-*.txt`) lists the scenario ids and their pwsh counterparts. Before running anything, the zsh harness checks that every line is a well-formed record, no id appears twice, and the index and the `scenario_*` functions match in both directions (`tests/zsh/index.sh`). `Parity.Tests.ps1` checks the same records and that every counterpart it names exists.
 - `tests/parity.txt` is the one list **both** suites read (`Parity.Tests.ps1` and `scenarios-parity.sh`): core command names, tool guards, role gating, `EDITOR` defaults, the local override, the theme file, and missing-tool silence must be identical in pwsh and zsh. Each row picks a role, the tools on PATH (or `core` for a complete install) and a local override (or theme file), then checks a command, a variable or the hint count. Add a line there to extend the parity contract.
 - `tests/syntax-colors.txt` is the other file both suites read: the color name of each token both shells color (command, string, comment, keyword, variable, error, ghost text), checked against PSReadLine (`Contract.Tests.ps1`) and `ZSH_HIGHLIGHT_STYLES` (`scenarios-line-editor.sh`).
-- `tests/uvtools-smoke.sh`: installs every `uvTools` pin in the install plan with the real `uv` (network), runs its `--help`, and checks that pins recognises it at its pin from the real `uv tool list` output (and does not mistake another pin for it). Both sandboxes fake `uv`, so this is the only check of that listing format. Needs `uv`, `jq` and `bash` (and `pwsh` on Windows). Run `sh tests/uvtools-smoke.sh`.
+- `tests/uvtools-smoke.sh`: installs every `uvTools` pin in the install plan with the real `uv` (network), runs its `--help`, validates the seeded `server-motd` config with that pin's `check --no-probe`, and checks that pins recognises it at its pin from the real `uv tool list` output (and does not mistake another pin for it). Both sandboxes fake `uv`, so this is the only check of that listing format. Needs `uv`, `jq` and `bash` (and `pwsh` on Windows). Run `sh tests/uvtools-smoke.sh`.
 - CI (`.github/workflows/gitleaks.yml`) runs gitleaks, shellcheck, Pester on Windows, the zsh harness on Ubuntu, and the uvTools smoke test on both.
 
 The sandboxes cannot show that a real machine feels right; use [`docs/real-machine-checklist.md`](docs/real-machine-checklist.md) after bootstrapping each role.
