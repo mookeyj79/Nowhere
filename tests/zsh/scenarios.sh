@@ -127,6 +127,15 @@ scenario_boot_uv_present() {
     run_bootstrap devbox; assert_eq "$BS_CODE" 0 "bootstrap failed: $BS_OUT"
     assert_eq "$(bs_log curl.log | grep -c astral.sh)" 0 'uv installer skipped'
 }
+scenario_boot_uv_sandboxed() {
+    new_bootstrap_sandbox
+    printf 'command -v uv || true\n' > "$BS_CLONE/probe-uv.sh"
+    bs_run probe-uv.sh
+    assert_empty "$BS_OUT" 'uv resolves outside the fake bin'
+    cp "$BS_BIN/uv.fake" "$BS_BIN/uv"
+    bs_run probe-uv.sh
+    assert_eq "$BS_OUT" "$BS_BIN/uv" 'uv resolves to the fake'
+}
 scenario_boot_stub() {
     new_bootstrap_sandbox
     run_bootstrap server; assert_eq "$BS_CODE" 0 "bootstrap failed: $BS_OUT"

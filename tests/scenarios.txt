@@ -25,6 +25,7 @@ boot-tools-server|both|Bootstrap.Tests: tool install / server|server installs co
 boot-tools-user|both|Bootstrap.Tests: tool install / user|user installs core only, and no server-motd, hook or config
 boot-uv|both|Bootstrap.Tests: uv / runs the official installer when uv is absent|uv installer runs once when uv is absent
 boot-uv-present|both|Bootstrap.Tests: uv / does nothing when uv is already on PATH|no uv install when present
+boot-uv-sandboxed|both|Bootstrap.Tests: uv / finds no uv outside the fake bin|a host uv (e.g. /usr/bin/uv) is hidden from the sandbox PATH
 boot-stub|both|Bootstrap.Tests: stub / writes a stub|stub sets the role and sources the clone profile
 boot-stub-backup|both|Bootstrap.Tests: stub / backs up a different existing stub|existing profile is backed up, not overwritten
 boot-local-seed|both|Bootstrap.Tests: local override / seeds from the example|override seeded owner-only
