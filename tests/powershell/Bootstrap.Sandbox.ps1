@@ -75,11 +75,32 @@ switch ($args[0]) {
                        Profile = (Join-Path $root 'home/profile.ps1'); MotdConfig = (Join-Path $root 'programdata/server-motd'); Config = (Join-Path $root 'home/.config/nowhere') }
 }
 
+# The child's PATH: the fake bin, then pwsh's and git's directories. On Linux
+# those are often /usr/bin, which can hold a distro uv that bootstrap would find
+# instead of the fake (skipping the installer, running real `uv tool install`s).
+# A host directory holding a uv is replaced by a mirror of links to its other
+# entries, so the only uv in reach is the fake one.
+$script:HostUvNames = 'uv', 'uvx', 'uv.exe', 'uvx.exe', 'uv.cmd', 'uv.ps1'
+function Get-SandboxPath {
+    param($Sandbox)
+    $hostDirs = @((Split-Path (Get-Process -Id $PID).Path), (Split-Path (Get-Command git).Source)) | Select-Object -Unique
+    $mirror = Join-Path $Sandbox.Root 'hostbin'
+    $dirs = foreach ($d in $hostDirs) {
+        if (-not ($script:HostUvNames | Where-Object { Test-Path (Join-Path $d $_) })) { $d; continue }
+        if ($IsWindows) { throw "uv found in $d, which the bootstrap sandbox needs on PATH; it would shadow the fake uv" }
+        New-Item -ItemType Directory -Path $mirror -Force | Out-Null
+        # first link wins on a duplicate name; ln reports it and goes on
+        & /bin/sh -c 'ln -s "$1"/* "$2"/ 2> /dev/null; true' sh $d $mirror
+        foreach ($n in $script:HostUvNames) { Remove-Item (Join-Path $mirror $n) -Force -ErrorAction SilentlyContinue }
+        $mirror
+    }
+    @($Sandbox.Bin) + @($dirs | Select-Object -Unique) -join [IO.Path]::PathSeparator
+}
+
 function Invoke-Bootstrap {
     param($Sandbox, [string]$Role = 'devbox')
     $pwsh = (Get-Process -Id $PID).Path
-    $gitDir = Split-Path (Get-Command git).Source
-    $path = @($Sandbox.Bin, (Split-Path $pwsh), $gitDir) -join [IO.Path]::PathSeparator
+    $path = Get-SandboxPath $Sandbox
     $modDir = Join-Path $Sandbox.Root 'modules'
     $fakes = @'
 function Install-Module {

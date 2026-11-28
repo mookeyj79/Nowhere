@@ -83,6 +83,14 @@ Describe 'uv' {
         (Invoke-Bootstrap $sb).ExitCode | Should -Be 0
         Read-Log $sb 'irm.log' | Should -BeNullOrEmpty
     }
+    It 'finds no uv outside the fake bin' {
+        $sb = New-BootstrapSandbox
+        $saved = $env:PATH
+        try {
+            $env:PATH = Get-SandboxPath $sb
+            Get-Command uv -CommandType Application, ExternalScript -ErrorAction SilentlyContinue | Should -BeNullOrEmpty
+        } finally { $env:PATH = $saved }
+    }
 }
 
 Describe 'stub' {
@@ -125,11 +133,13 @@ Describe 'local override' {
         $f = Join-Path $sb.Config 'local.ps1'
         Set-Content $f '$env:MY_TOKEN = "keep"'
         $before = (Get-Item $f).LastWriteTimeUtc
-        $aclBefore = (Get-Acl $f).Sddl
+        # Get-Acl is Windows-only; elsewhere the mode bits stand in for the ACL
+        $perms = { if ($IsWindows) { (Get-Acl $f).Sddl } else { & stat -c '%a' $f } }
+        $aclBefore = & $perms
         (Invoke-Bootstrap $sb).ExitCode | Should -Be 0
         Get-Content $f -Raw | Should -Match 'keep'
         (Get-Item $f).LastWriteTimeUtc | Should -Be $before
-        (Get-Acl $f).Sddl | Should -Be $aclBefore
+        (& $perms) | Should -Be $aclBefore
     }
 }
 

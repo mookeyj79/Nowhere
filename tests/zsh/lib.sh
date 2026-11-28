@@ -233,14 +233,33 @@ for d, _, fs in os.walk("."):
     git -C "$BS_CLONE" init -q
 }
 
+# host_bin  a directory of links to everything in /usr/bin and /bin except uv
+# and uvx, made once per run. The bootstrap sandbox uses it for host tools
+# (git, jq, coreutils, the shells) instead of listing /usr/bin, which can hold a
+# distro uv: bootstrap would find that uv before the fake one is installed,
+# skip the installer and run real `uv tool install`s against the network.
+host_bin() {
+    local hb=${TMPDIR:-/tmp}/nowhere-hostbin d
+    if [ ! -d "$hb" ]; then
+        mkdir -p "$hb.part"
+        for d in /usr/bin /bin; do
+            # merged /usr makes /bin a duplicate; ln keeps the first link and goes on
+            [ -d "$d" ] && ln -s "$d"/* "$hb.part/" 2> /dev/null
+        done
+        rm -f "$hb.part/uv" "$hb.part/uvx"
+        mv "$hb.part" "$hb"
+    fi
+    echo "$hb"
+}
+
 # bs_run <script in the clone> [args...]  run a clone script in the sandbox with
-# the fakes first on PATH and the root-owned paths moved under BS_ROOT. The
+# the fakes first on PATH, then host_bin and the root-owned paths moved under BS_ROOT. The
 # script sees NOWHERE_ROLE=$BS_ROLE (default server), as the stub would set it.
 # Sets BS_OUT (stdout and stderr together) and BS_CODE.
 bs_run() {
     local script=$1; shift
     BS_CODE=0
-    BS_OUT=$(env -i HOME="$BS_HOME" PATH="$BS_BIN:/usr/bin:/bin" FAKE_BIN="$BS_BIN" GIT_CONFIG_NOSYSTEM=1 \
+    BS_OUT=$(env -i HOME="$BS_HOME" PATH="$BS_BIN:$(host_bin)" FAKE_BIN="$BS_BIN" GIT_CONFIG_NOSYSTEM=1 \
         NOWHERE_ROLE="${BS_ROLE:-server}" \
         NOWHERE_MOTD_DIR="$BS_MOTD_DIR" NOWHERE_MOTD_CONFIG_DIR="$BS_MOTD_CONF" \
         NOWHERE_UVTOOL_DIR="$BS_UVTOOL_DIR" NOWHERE_UVTOOL_BIN_DIR="$BS_UVTOOL_BIN" \
