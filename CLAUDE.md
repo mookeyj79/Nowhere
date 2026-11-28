@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-The design is decided and built. Before changing a design decision, read why it was made in the closed wayfinder map (GitHub issue #1, its comments and linked tickets). `README.md` covers layout, bootstrap and tests.
+The design is decided and built. Before changing a design decision, read why it was made in the closed wayfinder map (GitHub issue #1, its comments and linked tickets) and in `docs/adr/`. Record new decisions as ADRs in `docs/adr/`, not in the README. `README.md` covers layout, bootstrap and tests.
 
 - Keep PowerShell and ZSH command names and behaviour identical; a change to a core command goes into `tests/parity.txt` too.
 - Install through bootstrap (`bootstrap/bootstrap.ps1` or `bootstrap.sh <devbox|server>`); it also enables the gitleaks commit hook. On a clone that wasn't bootstrapped, run `git config core.hooksPath .githooks`.
