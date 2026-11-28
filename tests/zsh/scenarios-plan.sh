@@ -71,9 +71,9 @@ scenario_plan_plugins() {
     assert_line "$out" "$(printf 'plugin\tp1\thttps://x/p1\tabc123')"
 }
 scenario_plan_real_manifest() {
-    # the shipped manifests plan cleanly on both roles, and no field is empty
+    # the shipped manifests plan cleanly on every role, and no field is empty
     local role out
-    for role in devbox server; do
+    for role in devbox user server; do
         out=$(plan "$role") || fail "plan $role failed"
         [ -n "$out" ] || fail "empty plan for $role"
         assert_eq "$(count_matching "$out" "$(printf '\t\t')")" 0 "empty field in the $role plan"

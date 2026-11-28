@@ -2,7 +2,7 @@
 #  profile.zsh  --  Nowhere ZSH entry point
 #
 #  Reached through a few-line stub at ~/.zshrc that sets NOWHERE_ROLE
-#  (devbox | server) and sources this file from the clone.
+#  (devbox | user | server) and sources this file from the clone.
 #
 #  Order: local override first (~/.config/nowhere/local.zsh), then core/conf.d
 #  merged with dev/conf.d (devbox only) in one filename order, then the theme
@@ -12,8 +12,9 @@
 
 typeset -g NowhereProfileDir=${${(%):-%x}:A:h}
 typeset -g NowhereRepoDir=${NowhereProfileDir:h}
+# A missing or unknown role behaves as server.
 typeset -g NowhereRole=server
-[[ $NOWHERE_ROLE == devbox ]] && NowhereRole=devbox
+[[ $NOWHERE_ROLE == (devbox|user) ]] && NowhereRole=$NOWHERE_ROLE
 
 # --- Local override -----------------------------------------------------------
 [[ -r $HOME/.config/nowhere/local.zsh ]] && source $HOME/.config/nowhere/local.zsh

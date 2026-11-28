@@ -1,5 +1,5 @@
 # =============================================================================
-#  Sync-Pins.ps1 -Role <devbox|server> [-RepoRoot <clone>] [-Strict]
+#  Sync-Pins.ps1 -Role <devbox|user|server> [-RepoRoot <clone>] [-Strict]
 #
 #  Brings a Windows machine to the pins in its plan (Plan.ps1):
 #    uvtool   uv tools at their pinned spec (server-motd on a server)
@@ -13,7 +13,7 @@
 # =============================================================================
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)] [ValidateSet('devbox', 'server')] [string]$Role,
+    [Parameter(Mandatory)] [ValidateSet('devbox', 'user', 'server')] [string]$Role,
     [string]$RepoRoot = (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent),
     [switch]$Strict
 )

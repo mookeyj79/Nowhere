@@ -24,6 +24,9 @@ Describe 'Resolve-UpdateSteps' {
     It 'a bare update on a devbox runs every step, in order' {
         Resolve-UpdateSteps -Role devbox | Should -Be @('Windows', 'Winget', 'Tools', 'WSL', 'DiskCleanup')
     }
+    It 'a bare update on a user machine runs every step but WSL' {
+        Resolve-UpdateSteps -Role user | Should -Be @('Windows', 'Winget', 'Tools', 'DiskCleanup')
+    }
     It 'a bare update on a server runs Windows Update, winget and Tools' {
         Resolve-UpdateSteps -Role server -HaveWinget $true | Should -Be @('Windows', 'Winget', 'Tools')
     }
@@ -32,6 +35,7 @@ Describe 'Resolve-UpdateSteps' {
     }
     It 'explicit switches pick exactly those steps on any role' {
         Resolve-UpdateSteps -Role server -Requested 'WSL' | Should -Be @('WSL')
+        Resolve-UpdateSteps -Role user -Requested 'WSL' | Should -Be @('WSL')
         Resolve-UpdateSteps -Role devbox -Requested 'Tools', 'Windows' | Should -Be @('Windows', 'Tools')
     }
 }

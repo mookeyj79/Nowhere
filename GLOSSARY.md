@@ -5,15 +5,15 @@ A personal shell environment: one setup that feels the same on every machine I l
 ## Language
 
 **Role**:
-What a machine is for: DevBox or Server, on Windows or Linux. Four roles in all.
+What a machine is for: DevBox, User or Server, on Windows or Linux. Six roles in all.
 _Avoid_: machine type, profile type
 
 **Core**:
-The layer of tools, aliases and keybindings shared by all four roles.
+The layer of tools, aliases and keybindings shared by every role.
 _Avoid_: base, common
 
 **Dev layer**:
-What a DevBox adds on top of the core; Servers do not load it.
+What a DevBox adds on top of the core; User machines and Servers do not load it.
 _Avoid_: extras, dev tools
 
 **Shared**:
@@ -57,7 +57,7 @@ The numbered directory of small profile files (`core/conf.d`, `dev/conf.d`) that
 _Avoid_: profile.d, includes
 
 **Parity list**:
-`tests/parity.txt`, the single list of core command names and key behaviours (tool guards, role gating, `EDITOR` defaults, the local override, the theme file, missing-tool silence) that both the Pester and zsh suites read, so the four roles are checked against one definition of "feels the same".
+`tests/parity.txt`, the single list of core command names and key behaviours (tool guards, role gating, `EDITOR` defaults, the local override, the theme file, missing-tool silence) that both the Pester and zsh suites read, so every role is checked against one definition of "feels the same".
 _Avoid_: scenario copy, mirror tests
 
 **Server MOTD**:
@@ -66,7 +66,7 @@ _Avoid_: banner script, motd profile
 
 ## Relationships
 
-- A **role** is one of four; it decides which layers load (**core** always, **dev layer** on a DevBox only) and whether the **Server MOTD** shows.
+- A **role** is one of six; it decides which layers load (**core** always, **dev layer** on a DevBox only) and whether the **Server MOTD** shows.
 - **Bootstrap** installs from a **manifest**, writes the **stub** and seeds the **local override**; the stub sets the role.
 - The **install plan** is read from the **manifests** for a **role**; **pins** apply it, from bootstrap and from `update`.
 - The **parity list** is how the shells are proven to agree on **core**.

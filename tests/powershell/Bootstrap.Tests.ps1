@@ -42,6 +42,15 @@ Describe 'tool install' {
         $installed | Should -Contain 'Starship.Starship'
         $installed | Should -Not -Contain 'Kubernetes.kubectl'
     }
+    It 'user installs core tools only and no server-motd' {
+        $sb = New-BootstrapSandbox -WithUv
+        (Invoke-Bootstrap $sb -Role user).ExitCode | Should -Be 0
+        $installed = Read-Log $sb 'installed.txt'
+        $installed | Should -Contain 'Starship.Starship'
+        $installed | Should -Not -Contain 'Kubernetes.kubectl'
+        Read-Log $sb 'uv.log' | Should -BeNullOrEmpty
+        Test-Path $sb.MotdConfig | Should -BeFalse
+    }
 }
 
 Describe 'pinned modules' {

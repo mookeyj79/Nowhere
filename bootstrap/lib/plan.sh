@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  plan.sh <devbox|server> [--arch x64|arm64|-] [--tools FILE] [--plugins FILE]
+#  plan.sh <devbox|user|server> [--arch x64|arm64|-] [--tools FILE] [--plugins FILE]
 #
 #  The Linux install plan: what shared/tools.json and zsh/plugins.json ask for
 #  on this role, one action per line, tab-separated. Reads files only and
@@ -19,10 +19,10 @@
 # =============================================================================
 set -euo pipefail
 
-usage() { echo "usage: plan.sh <devbox|server> [--arch x64|arm64|-] [--tools FILE] [--plugins FILE]" >&2; exit 2; }
+usage() { echo "usage: plan.sh <devbox|user|server> [--arch x64|arm64|-] [--tools FILE] [--plugins FILE]" >&2; exit 2; }
 [ $# -ge 1 ] || usage
 ROLE=$1; shift
-case "$ROLE" in devbox | server) ;; *) usage ;; esac
+case "$ROLE" in devbox | user | server) ;; *) usage ;; esac
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 TOOLS=$REPO_ROOT/shared/tools.json

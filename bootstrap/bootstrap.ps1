@@ -1,5 +1,5 @@
 # =============================================================================
-#  bootstrap.ps1 <devbox|server>
+#  bootstrap.ps1 <devbox|user|server>
 #
 #  Readies a Windows machine for Nowhere. Safe to re-run: every step checks
 #  state first and does nothing when already done.
@@ -24,7 +24,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory, Position = 0)]
-    [ValidateSet('devbox', 'server')]
+    [ValidateSet('devbox', 'user', 'server')]
     [string]$Role,
     [string]$RepoRoot = (Split-Path $PSScriptRoot -Parent),
     [string]$ProfilePath = $PROFILE.CurrentUserCurrentHost,

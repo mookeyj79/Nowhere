@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  pins.sh <devbox|server> [--strict]
+#  pins.sh <devbox|user|server> [--strict]
 #
 #  Brings a Linux machine to the pins in its plan (plan.sh):
 #    release   binaries at their pinned version and sha256, into ~/.local/bin
@@ -17,10 +17,10 @@
 # =============================================================================
 set -uo pipefail
 
-usage() { echo "usage: pins.sh <devbox|server> [--strict]" >&2; exit 2; }
+usage() { echo "usage: pins.sh <devbox|user|server> [--strict]" >&2; exit 2; }
 [ $# -ge 1 ] || usage
 ROLE=$1; shift
-case "$ROLE" in devbox | server) ;; *) usage ;; esac
+case "$ROLE" in devbox | user | server) ;; *) usage ;; esac
 STRICT=false
 case "${1:-}" in --strict) STRICT=true ;; "") ;; *) usage ;; esac
 

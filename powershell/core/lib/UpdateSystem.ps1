@@ -7,8 +7,10 @@
 #    Resolve-UpdateSteps -Role -Requested -HaveWinget
 #      which steps a run performs, in order: Windows, Winget, Tools, WSL,
 #      DiskCleanup. Nothing requested means every step on a devbox; on a
-#      server, Windows Update and Tools, plus Winget when winget exists (WSL
-#      is not a server feature and cleanmgr needs Desktop Experience).
+#      user machine every step but WSL (a family computer has no distro to
+#      update; -WSL still runs it); on a server, Windows Update and Tools,
+#      plus Winget when winget exists (WSL is not a server feature and
+#      cleanmgr needs Desktop Experience).
 #
 #    ConvertFrom-WingetUpgradeTable -Lines
 #      `winget upgrade` output (spinner redraws and all) to {Name, Id}, one
@@ -28,12 +30,13 @@ $script:UpdateStepOrder = 'Windows', 'Winget', 'Tools', 'WSL', 'DiskCleanup'
 
 function Resolve-UpdateSteps {
     param(
-        [ValidateSet('devbox', 'server')] [string]$Role = 'server',
+        [ValidateSet('devbox', 'user', 'server')] [string]$Role = 'server',
         [AllowEmptyCollection()] [string[]]$Requested = @(),
         [bool]$HaveWinget = $true
     )
     $want = if ($Requested.Count) { $Requested }
             elseif ($Role -eq 'server') { @('Windows', 'Tools') + @(if ($HaveWinget) { 'Winget' }) }
+            elseif ($Role -eq 'user') { @($script:UpdateStepOrder | Where-Object { $_ -ne 'WSL' }) }
             else { $script:UpdateStepOrder }
     @($script:UpdateStepOrder | Where-Object { $_ -in $want })
 }
@@ -80,7 +83,7 @@ function Get-WingetFailureReason {
 
 function Invoke-NowhereToolsUpdate {
     param(
-        [ValidateSet('devbox', 'server')] [string]$Role = 'server',
+        [ValidateSet('devbox', 'user', 'server')] [string]$Role = 'server',
         [Parameter(Mandatory)] [string]$RepoRoot
     )
     if (Get-Command uv -CommandType Application -ErrorAction SilentlyContinue) {

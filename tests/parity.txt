@@ -3,7 +3,7 @@
 # Each line is a check on a fresh sandboxed session; both shells must agree.
 #   id|shells|role|tools|local|check|arg|expect
 # shells : both | pwsh | zsh  (a line is skipped by shells not listed)
-# role   : devbox | server | unset
+# role   : devbox | user | server | unset
 # tools  : comma list of shimmed tools on PATH, - for none (empty PATH), or
 #          core for a complete core install: every tool in shared/core-tools.txt
 #          (and, on zsh, every pinned plugin)
@@ -47,6 +47,7 @@ guard-eza-present|both|server|eza|-|cmd|ll|present
 guard-eza-la|both|server|eza|-|cmd|la|present
 guard-eza-lt|both|server|eza|-|cmd|lt|present
 # Role gating of the dev layer (topl needs tofu; devbox only)
+role-topl-user|both|user|tofu|-|cmd|topl|absent
 role-topl-server|both|server|tofu|-|cmd|topl|absent
 role-topl-unset|both|unset|tofu|-|cmd|topl|absent
 role-topl-devbox|both|devbox|tofu|-|cmd|topl|present
@@ -65,9 +66,11 @@ role-dcup-devbox-notool|both|devbox|-|-|cmd|dcup|absent
 role-ansible-devbox|pwsh|devbox|-|-|cmd|ansible-playbook|present
 role-ansible-server|pwsh|server|-|-|cmd|ansible-playbook|absent
 role-ansible-unset|pwsh|unset|-|-|cmd|ansible-playbook|absent
+role-ansible-user|pwsh|user|-|-|cmd|ansible-playbook|absent
 # EDITOR defaults
 editor-devbox|both|devbox|-|-|env|EDITOR|code --wait
 editor-server|both|server|-|-|env|EDITOR|nano
+editor-user|both|user|-|-|env|EDITOR|nano
 editor-unset|both|unset|-|-|env|EDITOR|nano
 # Local override: optional, and its values beat the defaults
 local-none|both|devbox|-|-|cmd|goto|present
@@ -76,6 +79,7 @@ local-empty|both|server|-|empty|env|EDITOR|nano
 # Missing tools: silent apart from exactly one hint; none when nothing is missing
 missing-silent-devbox|both|devbox|-|-|hint|-|1
 missing-silent-server|both|server|-|-|hint|-|1
+missing-silent-user|both|user|-|-|hint|-|1
 complete-no-hint|both|server|core|-|hint|-|0
 # Theme file: optional, and sourced after conf.d, so its values beat conf.d's.
 # Every other row runs with no theme file, so its absence is checked by every

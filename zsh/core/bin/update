@@ -11,7 +11,8 @@
 #       their pins, installed if missing; never floats past a pin
 #    3. uv self update (skipped when uv is not on PATH)
 #
-#  The role comes from NOWHERE_ROLE (set by the stub); unset means server.
+#  The role comes from NOWHERE_ROLE (set by the stub); unset or unknown
+#  means server.
 #  A failing step is reported and the rest still run; exit status is non-zero
 #  if any step failed.
 # =============================================================================
@@ -19,7 +20,7 @@ set -uo pipefail
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 ROLE=server
-[ "${NOWHERE_ROLE:-}" = devbox ] && ROLE=devbox
+case "${NOWHERE_ROLE:-}" in devbox | user) ROLE=$NOWHERE_ROLE ;; esac
 FAILED=0
 
 step() { echo "==> $*"; }
